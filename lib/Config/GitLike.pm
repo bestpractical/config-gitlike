@@ -108,7 +108,9 @@ sub load_file {
     while (1) {
         $c =~ s/\A\s*//im;
 
-        if ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
+        if ($c =~ s/\A[#;].*?$//im) {
+            next;
+        } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
             $section = $1;
             $section .= ".$2" if defined $2;
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {

@@ -31,7 +31,7 @@ has 'multiple' => (
 
 =head1 NAME
 
-Config::GitLike
+Config::GitLike - git-compatible config file parsing
 
 =cut
 
@@ -259,7 +259,8 @@ sub dump {
 
 =head1 LICENSE
 
-You may modify and/or redistribute this software under the same terms as Perl 5.8.8.
+You may modify and/or redistribute this software under the same terms
+as Perl 5.8.8.
 
 =head1 COPYRIGHT
 

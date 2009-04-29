@@ -104,6 +104,24 @@ sub load_file {
     my $c = do {local $/; <$fh>};
     close $fh;
 
+    $self->parse_content(
+        content  => $c,
+        callback => sub {
+            $self->define(@_);
+        },
+        error    => sub {
+            die "Error parsing $filename, near:\n@_\n";
+        },
+    );
+    return $self->data;
+}
+
+
+sub parse_content {
+    my $self = shift;
+    my %args = @_;
+    my $c = $args{content};
+
     my($section, $prev) = (undef, '');
     while (1) {
         $c =~ s/\A\s*//im;
@@ -113,8 +131,11 @@ sub load_file {
         } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
             $section = lc $1;
             $section .= ".$2" if defined $2;
+            $args{callback}->(
+                section    => $section,
+            );
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
-            $self->define(
+            $args{callback}->(
                 section    => $section,
                 name       => $1,
             );
@@ -147,10 +168,10 @@ sub load_file {
                 } elsif ($c =~ s/\A([^\t \\\n]+)//im) {
                     $value .= $1;
                 } else {
-                    die "Bad config file $filename, near:\n$c";
+                    return $args{error}->($c);
                 }
             }
-            $self->define(
+            $args{callback}->(
                 section    => $section,
                 name       => $name,
                 value      => $value,
@@ -158,7 +179,7 @@ sub load_file {
         } elsif (not length $c) {
             last;
         } else {
-            die "Bad config file $filename, near:\n$c";
+            return $args{error}->($c);
         }
     }
 }
@@ -166,6 +187,7 @@ sub load_file {
 sub define {
     my $self = shift;
     my %args = @_;
+    return unless defined $args{name};
     $args{name} = lc $args{name};
     my $key = join(".", grep {defined} @args{qw/section name/});
     if ($self->is_multiple($key)) {

@@ -111,7 +111,7 @@ sub load_file {
         if ($c =~ s/\A[#;].*?$//im) {
             next;
         } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
-            $section = $1;
+            $section = lc $1;
             $section .= ".$2" if defined $2;
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
             $self->define(
@@ -166,6 +166,7 @@ sub load_file {
 sub define {
     my $self = shift;
     my %args = @_;
+    $args{name} = lc $args{name};
     my $key = join(".", grep {defined} @args{qw/section name/});
     if ($self->is_multiple($key)) {
         push @{$self->data->{$key} ||= []}, $args{value};

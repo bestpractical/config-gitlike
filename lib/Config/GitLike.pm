@@ -7,6 +7,8 @@ use Cwd;
 use File::HomeDir;
 use Regexp::Common;
 use Any::Moose;
+use 5.008;
+
 
 has 'confname' => (
     is => 'rw',
@@ -25,6 +27,14 @@ has 'multiple' => (
     isa => 'HashRef',
     default => sub { +{} },
 );
+
+
+=head1 NAME
+
+Config::GitLike
+
+=cut
+
 
 sub set_multiple {
     my $self = shift;
@@ -205,5 +215,19 @@ sub dump {
         }
     }
 }
+
+=head1 LICENSE
+
+You may modify and/or redistribute this software under the same terms as Perl 5.8.8.
+
+=head1 COPYRIGHT
+
+Copyright 2009 Best Practical Solutions, LLC
+
+=head1 AUTHOR
+
+Alex Vandiver <alexmv@bestpractical.com>
+
+=cut
 
 1;

@@ -128,6 +128,14 @@ sub load_file {
                     next;
                 } elsif ($c =~ s/\A([#;].*?)?$//im) {
                     last;
+                } elsif ($c =~ s/\A\\(['"])//im) {
+                    $value .= $1;
+                } elsif ($c =~ s/\A\\n//im) {
+                    $value .= "\n";
+                } elsif ($c =~ s/\A\\t//im) {
+                    $value .= "\t";
+                } elsif ($c =~ s/\A\\b//im) {
+                    $value .= "\b";
                 } elsif ($c =~ s/\A"([^"\\]*(?:(?:\\\n|\\[tbn"\\])[^"\\]*)*)"//im) {
                     my $v = $1;
                     $v =~ s/\\\n//g;

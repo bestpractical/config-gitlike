@@ -121,11 +121,13 @@ sub parse_content {
     my $self = shift;
     my %args = @_;
     my $c = $args{content};
+    my $length = length $c;
 
     my($section, $prev) = (undef, '');
     while (1) {
         $c =~ s/\A\s*//im;
 
+        my $offset = $length - length($c);
         if ($c =~ s/\A[#;].*?$//im) {
             next;
         } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
@@ -133,11 +135,15 @@ sub parse_content {
             $section .= ".$2" if defined $2;
             $args{callback}->(
                 section    => $section,
+                offset     => $offset,
+                length     => ($length - length($c)) - $offset,
             );
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
             $args{callback}->(
                 section    => $section,
                 name       => $1,
+                offset     => $offset,
+                length     => ($length - length($c)) - $offset,
             );
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
             my $name = $1;
@@ -175,6 +181,8 @@ sub parse_content {
                 section    => $section,
                 name       => $name,
                 value      => $value,
+                offset     => $offset,
+                length     => ($length - length($c)) - $offset,
             );
         } elsif (not length $c) {
             last;

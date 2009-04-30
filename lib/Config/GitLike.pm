@@ -7,6 +7,7 @@ use Cwd;
 use File::HomeDir;
 use Regexp::Common;
 use Any::Moose;
+use Fcntl qw/O_CREAT O_EXCL O_WRONLY/;
 use 5.008;
 
 
@@ -255,6 +256,139 @@ sub dump {
             print "$key\n";
         }
     }
+}
+
+sub format_section {
+    my $self = shift;
+    my $section = shift;
+    if ($section =~ /^(.*?)\.(.*)$/) {
+        my ($section, $subsection) = ($1, $2);
+        $subsection =~ s/(["\\])/\\$1/g;
+        return qq|[$section "$subsection"]\n|;
+    } else {
+        return qq|[$section]\n|;
+    }
+}
+
+sub format_definition {
+    my $self = shift;
+    my %args = @_;
+    my $quote = $args{value} =~ /(^\s|;|#|\s$)/ ? '"' : '';
+    $args{value} =~ s/\\/\\\\/g;
+    $args{value} =~ s/"/\\"/g;
+    $args{value} =~ s/\t/\\t/g;
+    $args{value} =~ s/\n/\\n/g;
+    my $ret = "$args{key} = $quote$args{value}$quote";
+    $ret = "\t$ret\n" unless $args{bare};
+    return $ret;
+}
+
+sub set {
+    my $self = shift;
+    my (%args) = (
+        key      => undef,
+        value    => undef,
+        filename => undef,
+        filter   => undef,
+        @_
+    );
+
+    $args{multiple} = $self->is_multiple($args{key})
+        unless defined $args{multiple};
+
+    $args{key} =~ /^(?:(.*)\.)?(.*)$/;
+    my($section, $key) = ($1, $2);
+    die "No section given in key $args{key}\n" unless defined $section;
+
+    unless (-e $args{filename}) {
+        die "No occurrance of $args{key} found to unset in $args{filename}\n"
+            unless defined $args{value};
+        open(my $fh, ">", $args{filename})
+            or die "Can't write to $args{filename}: $!\n";
+        print $fh $self->format_section($section);
+        print $fh $self->format_definition( key => $key, value => $args{value} );
+        close $fh;
+        return;
+    }
+
+    open(my $fh, "<", $args{filename}) or return;
+    my $c = do {local $/; <$fh>};
+    $c =~ s/\n*$/\n/; # Ensure it ends with a newline
+    close $fh;
+
+    my $new;
+    my @replace;
+    $self->parse_content(
+        content  => $c,
+        callback => sub {
+            my %got = @_;
+            return unless $got{section} eq $section;
+            $new = $got{offset} + $got{length};
+            return unless defined $got{name};
+            push @replace, {offset => $got{offset}, length => $got{length}}
+                if lc $key eq $got{name};
+        },
+        error    => sub {
+            die "Error parsing $args{filename}, near:\n@_\n";
+        },
+    );
+
+    if ($args{multiple}) {
+        die "!!!"; # Unimplemented yet
+    } else {
+        die "Multiple occurrances of non-multiple key?"
+            if @replace > 1;
+        if (defined $args{value}) {
+            if (@replace) {
+                # Replacing an existing value
+                substr(
+                    $c,
+                    $replace[0]{offset},
+                    $replace[0]{length},
+                    $self->format_definition(
+                        key   => $key,
+                        value => $args{value},
+                        bare  => 1,
+                    )
+                );
+            } elsif (defined $new) {
+                # Adding a new value to the end of an existing block
+                substr(
+                    $c,
+                    index($c, "\n", $new)+1,
+                    0,
+                    $self->format_definition(
+                        key   => $key,
+                        value => $args{value}
+                    )
+                );
+            } else {
+                # Adding a new section
+                $c .= $self->format_section($section);
+                $c .= $self->format_definition( key => $key, value => $args{value} );
+            }
+        } else {
+            # Removing an existing value
+            die "No occurrance of $args{key} found to unset in $args{filename}\n"
+                if unless @replace;
+
+            my $start = rindex($c, "\n", $replace[0]{offset});
+            substr(
+                $c,
+                $start,
+                index($c, "\n", $replace[0]{offset}+$replace[0]{length})-$start,
+                ""
+            );
+        }
+    }
+
+    sysopen($fh, "$args{filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
+        or die "Can't open $args{filename}.lock for writing: $!\n";
+    syswrite($fh, $c);
+    close($fh);
+
+    rename("$args{filename}.lock", $args{filename})
+        or die "Can't rename $args{filename}.lock to $args{filename}: $!\n";
 }
 
 =head1 LICENSE

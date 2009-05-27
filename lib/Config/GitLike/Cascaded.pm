@@ -14,10 +14,9 @@ sub load_dirs {
     my $path = shift;
     my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
     my @dirs = File::Spec->splitdir( $dirs );
-    while (@dirs) {
-        my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs), $self->dir_file );
+    for my $i ( 1 .. $#dirs ) {
+        my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs[0..$i]), $self->dir_file );
         $self->load_file( $path ) if -e $path;
-        pop @dirs;
     }
 }
 

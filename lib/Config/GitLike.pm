@@ -370,7 +370,7 @@ sub set {
         } else {
             # Removing an existing value
             die "No occurrance of $args{key} found to unset in $args{filename}\n"
-                if unless @replace;
+                unless @replace;
 
             my $start = rindex($c, "\n", $replace[0]{offset});
             substr(

@@ -51,10 +51,11 @@ sub is_multiple {
 
 sub load {
     my $self = shift;
+    my $path = shift || Cwd::cwd;
     $self->data({});
     $self->load_global;
     $self->load_user;
-    $self->load_dirs;
+    $self->load_dirs( $path );
     return $self->data;
 }
 
@@ -65,7 +66,8 @@ sub dir_file {
 
 sub load_dirs {
     my $self = shift;
-    my($vol, $dirs, undef) = File::Spec->splitpath( Cwd::cwd, 1 );
+    my $path = shift;
+    my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
     my @dirs = File::Spec->splitdir( $dirs );
     while (@dirs) {
         my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs), $self->dir_file );

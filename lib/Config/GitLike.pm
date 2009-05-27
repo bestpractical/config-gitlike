@@ -75,6 +75,7 @@ sub load_dirs {
             $self->load_file( $path );
             last;
         }
+        pop @dirs;
     }
 }
 

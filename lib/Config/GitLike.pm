@@ -252,11 +252,16 @@ sub parse_content {
 
     my($section, $prev) = (undef, '');
     while (1) {
+        # drop leading blank lines
         $c =~ s/\A\s*//im;
 
         my $offset = $length - length($c);
+        # drop lines that start with a comment
         if ($c =~ s/\A[#;].*?$//im) {
             next;
+        # [sub]section headers of the format [section "subsection"] (with
+        # unlimited whitespace between). any characters that appear
+        # after the closing square bracket are ignored.
         } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
             $section = lc $1;
             $section .= ".$2" if defined $2;
@@ -265,6 +270,8 @@ sub parse_content {
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        # keys followed by a unlimited whitespace and (optionally) a comment
+        # (no value)
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
             $args{callback}->(
                 section    => $section,
@@ -272,34 +279,51 @@ sub parse_content {
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        # key/value pairs (this particular regex matches only the key part and
+        # the =, with unlimited whitespace around the =)
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
             my $name = $1;
             my $value = "";
             while (1) {
+                # concatenate whitespace
                 if ($c =~ s/\A[\t ]+//im) {
                     $value .= ' ';
+                # line continuation (\ character proceeded by new line)
                 } elsif ($c =~ s/\A\\\r?\n//im) {
                     next;
+                # comment
                 } elsif ($c =~ s/\A([#;].*?)?$//im) {
                     last;
+                # escaped quote characters are part of the value
                 } elsif ($c =~ s/\A\\(['"])//im) {
                     $value .= $1;
+                # escaped newline in config is translated to actual newline
                 } elsif ($c =~ s/\A\\n//im) {
                     $value .= "\n";
+                # escaped tab in config is translated to actual tab
                 } elsif ($c =~ s/\A\\t//im) {
                     $value .= "\t";
+                # escaped backspace in config is translated to actual backspace
                 } elsif ($c =~ s/\A\\b//im) {
                     $value .= "\b";
+                # valid value (possibly containing escape codes)
                 } elsif ($c =~ s/\A"([^"\\]*(?:(?:\\\n|\\[tbn"\\])[^"\\]*)*)"//im) {
                     my $v = $1;
+                    # remove all continuations (\ followed by a newline)
                     $v =~ s/\\\n//g;
+                    # swap escaped newlines with actual newlines
                     $v =~ s/\\n/\n/g;
+                    # swab escaped tabs with actual tabs
                     $v =~ s/\\t/\t/g;
+                    # swap escaped backspaces with actual backspaces
                     $v =~ s/\\b/\b/g;
+                    # swap escaped \ with actual \
                     $v =~ s/\\\\/\\/g;
                     $value .= $v;
+                # valid value (no escape codes)
                 } elsif ($c =~ s/\A([^\t \\\n]+)//im) {
                     $value .= $1;
+                # unparseable
                 } else {
                     return $args{error}->($c);
                 }
@@ -311,8 +335,10 @@ sub parse_content {
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        # end of content string; all done now
         } elsif (not length $c) {
             last;
+        # unparseable
         } else {
             return $args{error}->($c);
         }

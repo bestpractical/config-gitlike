@@ -555,6 +555,10 @@ sub set {
         or die "Can't rename $args{filename}.lock to $args{filename}: $!\n";
 }
 
+1;
+
+__END__
+
 =head1 LICENSE
 
 You may modify and/or redistribute this software under the same terms
@@ -567,7 +571,3 @@ Copyright 2009 Best Practical Solutions, LLC
 =head1 AUTHOR
 
 Alex Vandiver <alexmv@bestpractical.com>
-
-=cut
-
-1;

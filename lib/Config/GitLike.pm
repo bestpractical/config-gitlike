@@ -34,8 +34,21 @@ has 'multiple' => (
 
 Config::GitLike - git-compatible config file parsing
 
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
 =cut
 
+=head2 set_multiple $name
+
+Mark the key string C<$name> as containing multiple values.
+
+Returns nothing.
+
+=cut
 
 sub set_multiple {
     my $self = shift;
@@ -43,11 +56,28 @@ sub set_multiple {
     $self->multiple->{$name} = $mult;
 }
 
+=head2 is_multiple $name
+
+Return a true value if the key string C<$name> contains multiple values; false
+otherwise.
+
+=cut
+
 sub is_multiple {
     my $self = shift;
     my $name = shift;
     return $self->multiple->{$name};
 }
+
+=head2 load
+
+Load the global, local, and directory configuration file with the filename
+C<confname> into the C<data> attribute (if they exist).
+
+Returns the contents of the C<data> attribute after all configs have been
+loaded.
+
+=cut
 
 sub load {
     my $self = shift;
@@ -59,10 +89,33 @@ sub load {
     return $self->data;
 }
 
+=head2 dir_file
+
+Return a string representing the path to a configuration file with the
+name C<confname> in the current working directory (or a directory higher
+on the directory tree).
+
+Override this method in a subclass if the directory file has a name
+other than C<confname> or is contained in, for example, a subdirectory
+(such as with C<./.git/config> versus C<~/.gitconfig>).
+
+=cut
+
 sub dir_file {
     my $self = shift;
     return "." . $self->confname;
 }
+
+=head2 load_dirs
+
+Load the configuration file in the current working directory into the C<data>
+attribute or, if there is no config matching C<dir_file> in the current working
+directory, walk up the directory tree until one is found. (No error is thrown
+if none is found.)
+
+Returns nothing of note.
+
+=cut
 
 sub load_dirs {
     my $self = shift;
@@ -79,10 +132,30 @@ sub load_dirs {
     }
 }
 
+=head2 global_file
+
+Return a string representing the path to a system-wide configuration file with
+name C<confname> (the L<Config::GitLike> object's C<confname> attribute).
+
+Override this method in a subclass if the global file has a different name
+than C<confname> or is contained in a directory other than C</etc>.
+
+=cut
+
 sub global_file {
     my $self = shift;
     return "/etc/" . $self->confname;
 }
+
+=head2 load_global
+
+If a global configuration file with the name C<confname> exists, load
+its configuration variables into the C<data> attribute.
+
+Returns the current contents of the C<data> attribute after the
+file has been loaded, or undef if no global config file is found.
+
+=cut
 
 sub load_global {
     my $self = shift;
@@ -90,16 +163,45 @@ sub load_global {
     return $self->load_file( $self->global_file );
 }
 
+=head2 user_file
+
+Return a string representing the path to a configuration file
+in the current user's home directory with filename C<confname>.
+
+Override this method in a subclass if the user directory file
+does not have the same name as the global config file.
+
+=cut
+
 sub user_file {
     my $self = shift;
     return File::Spec->catfile( File::HomeDir->my_home, "." . $self->confname );
 }
+
+=head2 load_user
+
+If a configuration file with the name C<confname> exists in the current
+user's home directory, load its config variables into the C<data>
+attribute.
+
+Returns the current contents of the C<data> attribute after the file
+has been loaded, or undef if no global config file is found.
+
+=cut
 
 sub load_user {
     my $self = shift;
     return unless -e $self->user_file;
     return $self->load_file( $self->user_file );
 }
+
+=head2 load_file $filename
+
+Takes a string containing the path to a file, opens it if it exists, loads its
+config variables into the C<data> attribute, and returns the current contents
+of the C<data> attribute (a hashref).
+
+=cut
 
 sub load_file {
     my $self = shift;
@@ -120,6 +222,27 @@ sub load_file {
     return $self->data;
 }
 
+=head2 parse_content( content = $str, callback = $sub, error = $sub )
+
+Takes arguments consisting of C<content>, a string of the content of the
+configuration file to be parsed, C<callback>, a submethod to run on information
+retrieved from the config file (headers, subheaders, and key/value pairs), and
+C<error>, a submethod to run on malformed content.
+
+Returns undef on success and C<error($content)> on failure.
+
+C<callback> is called like:
+
+    callback(section => $str, offset => $num, length $num, name => $str, value => $str)
+
+C<name> and C<value> may be omitted if the callback is not being called on a
+key/value pair, or if it is being called on a key with no value.
+
+C<error> is called like:
+
+    error($content)
+
+=cut
 
 sub parse_content {
     my $self = shift;
@@ -226,6 +349,18 @@ sub cast {
         return $v + 0;
     }
 }
+
+=head2 get( key => $str, as => $type )
+
+Retrieve the config value associated with C<key> cast as an C<as>.
+
+The C<key> option is required (will return a string by default); the C<as>
+option is not (will return undef if unspecified).
+
+Loads the configuration file with name $confname if it hasn't yet been
+loaded.
+
+=cut
 
 sub get {
     my $self = shift;

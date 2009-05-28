@@ -9,6 +9,16 @@ use File::Spec;
 
 extends 'Config::GitLike';
 
+=head1 NAME
+
+Config::GitLike::Cascaded - git-like config file parsing with cascaded inheritance
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
 =head2 load_dirs
 
 Load the configuration files in the directory tree, starting with the root
@@ -34,3 +44,18 @@ __PACKAGE__->meta->make_immutable;
 no Moose;
 
 1;
+
+__END__
+
+=head1 LICENSE
+
+You may modify and/or redistribute this software under the same terms
+as Perl 5.8.8.
+
+=head1 COPYRIGHT
+
+Copyright 2009 Best Practical Solutions, LLC
+
+=head1 AUTHOR
+
+Alex Vandiver <alexmv@bestpractical.com>

@@ -9,6 +9,16 @@ use File::Spec;
 
 extends 'Config::GitLike';
 
+=head2 load_dirs
+
+Load the configuration files in the directory tree, starting with the root
+directory and walking up to the current working directory. (No error is thrown
+if no config files are found.)
+
+Returns nothing of note.
+
+=cut
+
 sub load_dirs {
     my $self = shift;
     my $path = shift;

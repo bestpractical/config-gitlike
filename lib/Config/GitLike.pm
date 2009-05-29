@@ -246,7 +246,12 @@ C<error> is called like:
 
 sub parse_content {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        content  => "",
+        callback => sub {},
+        error    => sub {},
+        @_,
+    );
     my $c = $args{content};
     my $length = length $c;
 
@@ -347,7 +352,12 @@ sub parse_content {
 
 sub define {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        section => undef,
+        name    => undef,
+        value   => undef,
+        @_,
+    );
     return unless defined $args{name};
     $args{name} = lc $args{name};
     my $key = join(".", grep {defined} @args{qw/section name/});
@@ -360,7 +370,11 @@ sub define {
 
 sub cast {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        value => undef,
+        as    => undef, # bool, int, or num
+        @_,
+    );
     my $v = $args{value};
     return $v unless defined $args{as};
     if ($args{as} =~ /bool/i) {
@@ -390,7 +404,11 @@ loaded.
 
 sub get {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        key => undef,
+        as  => undef,
+        @_,
+    );
     $self->load unless $self->is_loaded;
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -403,7 +421,11 @@ sub get {
 
 sub get_all {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        key => undef,
+        as  => undef,
+        @_,
+    );
     $self->load unless $self->is_loaded;
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -436,7 +458,12 @@ sub format_section {
 
 sub format_definition {
     my $self = shift;
-    my %args = @_;
+    my %args = (
+        key   => undef,
+        value => undef,
+        bare  => undef
+        @_,
+    );
     my $quote = $args{value} =~ /(^\s|;|#|\s$)/ ? '"' : '';
     $args{value} =~ s/\\/\\\\/g;
     $args{value} =~ s/"/\\"/g;

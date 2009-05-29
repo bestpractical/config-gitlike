@@ -240,7 +240,7 @@ key/value pair, or if it is being called on a key with no value.
 
 C<error> is called like:
 
-    error($content)
+    error( content => $content, offset => $offset )
 
 =cut
 
@@ -330,7 +330,13 @@ sub parse_content {
                     $value .= $1;
                 # unparseable
                 } else {
-                    return $args{error}->($c);
+                    # Note that $args{content} is the _original_
+                    # content, not the nibbled $c, which is the
+                    # remaining unparsed content
+                    return $args{error}->(
+                        content => $args{content},
+                        offset =>  $offset,
+                    );
                 }
             }
             $args{callback}->(
@@ -345,7 +351,12 @@ sub parse_content {
             last;
         # unparseable
         } else {
-            return $args{error}->($c);
+            # Note that $args{content} is the _original_ content, not
+            # the nibbled $c, which is the remaining unparsed content
+            return $args{error}->(
+                content => $args{content},
+                offset  => $offset,
+            );
         }
     }
 }

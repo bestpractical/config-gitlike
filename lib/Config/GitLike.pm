@@ -222,7 +222,7 @@ sub load_file {
     return $self->data;
 }
 
-=head2 parse_content( content = $str, callback = $sub, error = $sub )
+=head2 parse_content( content => $str, callback => $sub, error => $sub )
 
 Takes arguments consisting of C<content>, a string of the content of the
 configuration file to be parsed, C<callback>, a submethod to run on information
@@ -233,7 +233,7 @@ Returns undef on success and C<error($content)> on failure.
 
 C<callback> is called like:
 
-    callback(section => $str, offset => $num, length $num, name => $str, value => $str)
+    callback(section => $str, offset => $num, length => $num, name => $str, value => $str)
 
 C<name> and C<value> may be omitted if the callback is not being called on a
 key/value pair, or if it is being called on a key with no value.
@@ -260,8 +260,8 @@ sub parse_content {
         if ($c =~ s/\A[#;].*?$//im) {
             next;
         # [sub]section headers of the format [section "subsection"] (with
-        # unlimited whitespace between). any characters that appear
-        # after the closing square bracket are ignored.
+        # unlimited whitespace between). variable definitions may directly
+        # follow the section header, on the same line!
         } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
             $section = lc $1;
             $section .= ".$2" if defined $2;
@@ -306,14 +306,14 @@ sub parse_content {
                 # escaped backspace in config is translated to actual backspace
                 } elsif ($c =~ s/\A\\b//im) {
                     $value .= "\b";
-                # valid value (possibly containing escape codes)
+                # quote-delimited value (possibly containing escape codes)
                 } elsif ($c =~ s/\A"([^"\\]*(?:(?:\\\n|\\[tbn"\\])[^"\\]*)*)"//im) {
                     my $v = $1;
                     # remove all continuations (\ followed by a newline)
                     $v =~ s/\\\n//g;
                     # swap escaped newlines with actual newlines
                     $v =~ s/\\n/\n/g;
-                    # swab escaped tabs with actual tabs
+                    # swap escaped tabs with actual tabs
                     $v =~ s/\\t/\t/g;
                     # swap escaped backspaces with actual backspaces
                     $v =~ s/\\b/\b/g;

@@ -595,7 +595,7 @@ sub set {
         content  => $c,
         callback => sub {
             my %got = @_;
-            return unless $got{section} eq $section;
+            return unless lc($got{section}) eq lc($section);
             $new = $got{offset} + $got{length};
             return unless defined $got{name};
             push @replace, {offset => $got{offset}, length => $got{length}}

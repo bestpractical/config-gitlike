@@ -379,6 +379,23 @@ sub define {
     }
 }
 
+=head2 cast( value => 'foo', as => 'int' )
+
+Return C<value> cast into the type specified by C<as>.
+
+Valid values for C<as> are C<bool> or C<int>. For C<bool>, C<true>, C<yes>,
+C<on>, C<1>, and undef are translated into a true value; anything else is
+false.
+
+For C<int>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be multiplied by
+1024, 1048576, and 1073741824, respectively, before being returned.
+
+If C<as> is unspecified, C<value> is returned unchanged.
+
+XXX TODO
+
+=cut
+
 sub cast {
     my $self = shift;
     my %args = (
@@ -401,15 +418,24 @@ sub cast {
     }
 }
 
-=head2 get( key => $str, as => $type )
+=head2 get( key => 'foo', as => 'int', filter => qr/regex$/ )
 
 Retrieve the config value associated with C<key> cast as an C<as>.
 
-The C<key> option is required (will return a string by default); the C<as>
-option is not (will return undef if unspecified).
+The C<key> option is required (will return undef if unspecified); the C<as>
+option is not (will return a string by default).
+
+If C<key> doesn't exist in the config, undef is returned. Dies with
+the exception "Multiple values" if the given key has more than one
+value associated with it. (Use C<get_all to retrieve multiple values.)
 
 Loads the configuration file with name $confname if it hasn't yet been
-loaded.
+loaded. Note that if you've run any C<set> calls to the loaded
+configuration files since the last time they were loaded, you MUST
+call C<load> again before getting, or the returned configuration data
+may not match the configuration variables on-disk.
+
+TODO implement filter (multiple values)
 
 =cut
 
@@ -430,6 +456,17 @@ sub get {
     }
 }
 
+=head2 get_all( key => 'foo', filter => qr/regex$/, as => 'bool' )
+
+Like C<get>, but does not fail if the number of values for the key is not
+exactly one.
+
+Returns a list of values, cast as C<as> if C<as> is specified.
+
+TODO implement filter
+
+=cut
+
 sub get_all {
     my $self = shift;
     my %args = (
@@ -444,6 +481,17 @@ sub get_all {
     return map {$self->cast( value => $v, as => $args{as} )} @v;
 }
 
+=head2 dump
+
+Print all configuration data, sorted in ASCII order, in the form:
+
+    section.key=value
+    section2.key=value
+
+This is similar to the output of C<git config --list>.
+
+=cut
+
 sub dump {
     my $self = shift;
     for my $key (sort keys %{$self->data}) {
@@ -454,6 +502,13 @@ sub dump {
         }
     }
 }
+
+=head2 format_section 'section.subsection'
+
+Return a formatted string representing how section headers should be printed in
+the config file.
+
+=cut
 
 sub format_section {
     my $self = shift;
@@ -484,6 +539,22 @@ sub format_definition {
     $ret = "\t$ret\n" unless $args{bare};
     return $ret;
 }
+
+=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => qr/regex/ )
+
+Sets the key C<foo> in the configuration section C<section> to the value C<bar> in the
+given filename. It's necessary to specify the filename since the C<confname> attribute
+is not unambiguous enough to determine where to write to. (There may be multiple config
+files in different directories which inherit.)
+
+To unset a key, pass in C<key> but not C<value>.
+
+Returns nothing.
+
+TODO The filter arg is for multiple value support (see value_regex in git help config
+for details).
+
+=cut
 
 sub set {
     my $self = shift;

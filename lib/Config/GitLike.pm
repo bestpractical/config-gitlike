@@ -566,6 +566,8 @@ sub set {
         @_
     );
 
+    die "No key given\n" unless defined $args{key};
+
     $args{multiple} = $self->is_multiple($args{key})
         unless defined $args{multiple};
 

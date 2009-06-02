@@ -575,6 +575,8 @@ sub set {
     my($section, $key) = ($1, $2);
     die "No section given in key $args{key}\n" unless defined $section;
 
+    die "Invalid key $key\n" if $self->_invalid_key($key);
+
     unless (-f $args{filename}) {
         die "No occurrence of $args{key} found to unset in $args{filename}\n"
             unless defined $args{value};
@@ -664,6 +666,14 @@ sub set {
 
     rename("$args{filename}.lock", $args{filename})
         or die "Can't rename $args{filename}.lock to $args{filename}: $!\n";
+}
+
+# according to git test suite, keys cannot start with a number
+sub _invalid_key {
+    my $self = shift;
+    my $key = shift;
+
+    return $key =~ /^[0-9]/;
 }
 
 1;

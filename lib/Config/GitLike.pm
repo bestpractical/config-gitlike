@@ -124,7 +124,7 @@ sub load_dirs {
     my @dirs = File::Spec->splitdir( $dirs );
     while (@dirs) {
         my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs), $self->dir_file );
-        if (-e $path) {
+        if (-f $path) {
             $self->load_file( $path );
             last;
         }
@@ -159,7 +159,7 @@ file has been loaded, or undef if no global config file is found.
 
 sub load_global {
     my $self = shift;
-    return unless -e $self->global_file;
+    return unless -f $self->global_file;
     return $self->load_file( $self->global_file );
 }
 
@@ -191,7 +191,7 @@ has been loaded, or undef if no global config file is found.
 
 sub load_user {
     my $self = shift;
-    return unless -e $self->user_file;
+    return unless -f $self->user_file;
     return $self->load_file( $self->user_file );
 }
 
@@ -575,7 +575,7 @@ sub set {
     my($section, $key) = ($1, $2);
     die "No section given in key $args{key}\n" unless defined $section;
 
-    unless (-e $args{filename}) {
+    unless (-f $args{filename}) {
         die "No occurrence of $args{key} found to unset in $args{filename}\n"
             unless defined $args{value};
         open(my $fh, ">", $args{filename})

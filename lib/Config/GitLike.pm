@@ -576,7 +576,7 @@ sub set {
     die "No section given in key $args{key}\n" unless defined $section;
 
     unless (-e $args{filename}) {
-        die "No occurrance of $args{key} found to unset in $args{filename}\n"
+        die "No occurrence of $args{key} found to unset in $args{filename}\n"
             unless defined $args{value};
         open(my $fh, ">", $args{filename})
             or die "Can't write to $args{filename}: $!\n";
@@ -611,7 +611,7 @@ sub set {
     if ($args{multiple}) {
         die "!!!"; # Unimplemented yet
     } else {
-        die "Multiple occurrances of non-multiple key?"
+        die "Multiple occurrences of non-multiple key?"
             if @replace > 1;
         if (defined $args{value}) {
             if (@replace) {
@@ -644,7 +644,7 @@ sub set {
             }
         } else {
             # Removing an existing value
-            die "No occurrance of $args{key} found to unset in $args{filename}\n"
+            die "No occurrence of $args{key} found to unset in $args{filename}\n"
                 unless @replace;
 
             my $start = rindex($c, "\n", $replace[0]{offset});

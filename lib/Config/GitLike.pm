@@ -527,7 +527,7 @@ sub format_definition {
     my %args = (
         key   => undef,
         value => undef,
-        bare  => undef
+        bare  => undef,
         @_,
     );
     my $quote = $args{value} =~ /(^\s|;|#|\s$)/ ? '"' : '';

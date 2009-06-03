@@ -355,21 +355,16 @@ EOF
 
 is(slurp($config_filename), $expect, 'hierarchical section value');
 
-# TODO git outputs keys in the order they are in the config file;
-# this won't exactly match since ->dump outputs sorted
-TODO: {
-    local $TODO = 'git config doesn\'t sort when using --list';
-
-    $expect = <<'EOF'
+$expect = <<'EOF'
+123456.a123=987
 beta.noindent=sillyValue
 nextsection.nonewline=wow2 for me
-123456.a123=987
 version.1.2.3eX.alpha=beta
 EOF
-    ;
+;
 
-    is($config->dump, $expect, 'working dump');
-}
+$config->load;
+is($config->dump, $expect, 'working dump');
 
 TODO: {
     local $TODO = 'get_regexp is not implemented';

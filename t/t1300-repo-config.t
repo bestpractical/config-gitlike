@@ -481,7 +481,7 @@ EOF
     is(slurp($config_filename), $expect, 'rename succeeded');
 
     throws_ok { $config->rename_section( from => 'branch."world domination"', to =>
-        'branch.drei', filename => $config_filename ) } \
+        'branch.drei', filename => $config_filename ) }
         qr/rename non-existing section/, 'rename non-existing section';
 
     is(slurp($config_filename), $expect,

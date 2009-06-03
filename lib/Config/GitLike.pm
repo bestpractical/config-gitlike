@@ -493,24 +493,27 @@ sub get_all {
 
 =head2 dump
 
-Print all configuration data, sorted in ASCII order, in the form:
+Return a string containing all configuration data, sorted in ASCII order, in
+the form:
 
     section.key=value
     section2.key=value
 
-This is similar to the output of C<git config --list>.
+If you print this string, it is similar to the output of C<git config --list>.
 
 =cut
 
 sub dump {
     my $self = shift;
+    my $data = '';
     for my $key (sort keys %{$self->data}) {
         if (defined $self->data->{$key}) {
-            print "$key=".$self->data->{$key}."\n";
+            $data .= "$key=".$self->data->{$key}."\n";
         } else {
-            print "$key\n";
+            $data .= "$key\n";
         }
     }
+    return $data;
 }
 
 =head2 format_section 'section.subsection'

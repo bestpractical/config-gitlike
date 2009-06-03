@@ -257,11 +257,11 @@ sub parse_content {
 
     my($section, $prev) = (undef, '');
     while (1) {
-        # drop leading blank lines
+        # drop leading white space and blank lines
         $c =~ s/\A\s*//im;
 
         my $offset = $length - length($c);
-        # drop lines that start with a comment
+        # drop to end of line on comments
         if ($c =~ s/\A[#;].*?$//im) {
             next;
         # [sub]section headers of the format [section "subsection"] (with
@@ -289,16 +289,17 @@ sub parse_content {
         } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
             my $name = $1;
             my $value = "";
+            # parse the value
             while (1) {
-                # concatenate whitespace
-                if ($c =~ s/\A[\t ]+//im) {
+                # comment or no content left on line
+                if ($c =~ s/\A([ \t]*[#;].*?)?$//im) {
+                    last;
+                # any amount of whitespace between words becomes a single space
+                } elsif ($c =~ s/\A[\t ]+//im) {
                     $value .= ' ';
-                # line continuation (\ character proceeded by new line)
+                # line continuation (\ character followed by new line)
                 } elsif ($c =~ s/\A\\\r?\n//im) {
                     next;
-                # comment
-                } elsif ($c =~ s/\A([#;].*?)?$//im) {
-                    last;
                 # escaped quote characters are part of the value
                 } elsif ($c =~ s/\A\\(['"])//im) {
                     $value .= $1;

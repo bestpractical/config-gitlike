@@ -208,6 +208,7 @@ EOF
 
 is(slurp($config_filename), $expect, 'really mean test');
 
+# note: this is a bug!
 TODO: {
     local $TODO = "cannot handle replacing value after section w/o newline yet";
 
@@ -366,6 +367,7 @@ EOF
 $config->load;
 is($config->dump, $expect, 'working dump');
 
+# TODO perhaps regexps could just be supported by the get interface
 TODO: {
     local $TODO = 'get_regexp is not implemented';
 
@@ -410,7 +412,6 @@ lives_and { is($config->get( key => 'emptyvalue.variable', filter => qr/^$/ ),
 
 TODO: {
     local $TODO = "get_regexp is not implemented";
-    # TODO perhaps regexps could just be supported by the get interface
 
     lives_and { is($config->get_regexp( qr/novalue/ ), '') }
         'get_regexp variable with no value';

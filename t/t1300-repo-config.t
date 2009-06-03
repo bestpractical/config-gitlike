@@ -791,10 +791,12 @@ is($config->dump, $expect, 'value continued on next line');
 symlink File::Spec->catfile($config_dir, 'notyet'),
     File::Spec->catfile($config_dir, 'myconfig');
 
-my $myconfig = TestConfig->new(confname => 'myconfig');
+my $myconfig = TestConfig->new(confname => 'myconfig',
+    tmpdir => $config_dirname);
 $myconfig->set( key => 'test.frotz', value => 'nitfol',
     filename => File::Spec->catfile($config_dir, 'myconfig'));
-my $notyet = TestConfig->new(confname => 'notyet');
+my $notyet = TestConfig->new(confname => 'notyet',
+    tmpdir => $config_dirname);
 $notyet->set ( key => 'test.xyzzy', value => 'rezrov',
     filename => File::Spec->catfile($config_dir, 'notyet'));
 $notyet->load;

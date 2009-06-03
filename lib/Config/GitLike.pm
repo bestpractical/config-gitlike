@@ -36,11 +36,16 @@ Config::GitLike - git-compatible config file parsing
 
 =head1 SYNOPSIS
 
+    use Config::GitLike;
+
+    my $c = Config::GitLike->new(confname => 'config');
+    $c->load;
+
+    $c->get(
+
 =head1 DESCRIPTION
 
 =head1 METHODS
-
-=cut
 
 =head2 set_multiple $name
 
@@ -384,16 +389,17 @@ sub define {
 
 Return C<value> cast into the type specified by C<as>.
 
-Valid values for C<as> are C<bool> or C<int>. For C<bool>, C<true>, C<yes>,
-C<on>, C<1>, and undef are translated into a true value; anything else is
-false.
+Valid values for C<as> are C<bool>, C<int>, or C<num>. For C<bool>, C<true>,
+C<yes>, C<on>, C<1>, and undef are translated into a true value; anything else
+is false.
 
-For C<int>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be multiplied by
-1024, 1048576, and 1073741824, respectively, before being returned.
+For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be
+multiplied by 1024, 1048576, and 1073741824, respectively, before being
+returned.
+
+TODO should numbers be truncated if C<int> is specified?
 
 If C<as> is unspecified, C<value> is returned unchanged.
-
-XXX TODO
 
 =cut
 
@@ -518,8 +524,8 @@ sub dump {
 
 =head2 format_section 'section.subsection'
 
-Return a formatted string representing how section headers should be printed in
-the config file.
+Return a string containing the section/subsection header, formatted
+as it should appear in a config file.
 
 =cut
 
@@ -534,6 +540,14 @@ sub format_section {
         return qq|[$section]\n|;
     }
 }
+
+=head2 format_definition( key => 'str', value => 'str', bare => 1 )
+
+Return a string containing the key/value pair as they should be printed in the
+config file. If C<bare> is true, the returned value is not tab-indented nor
+followed by a newline.
+
+=cut
 
 sub format_definition {
     my $self = shift;

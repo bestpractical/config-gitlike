@@ -582,7 +582,8 @@ sub set {
 
     $args{key} =~ /^(?:(.*)\.)?(.*)$/;
     my($section, $key) = ($1, $2);
-    die "No section given in key $args{key}\n" unless defined $section;
+    die "No section given in key or invalid key $args{key}\n"
+        unless defined $section;
 
     die "Invalid key $key\n" if $self->_invalid_key($key);
 

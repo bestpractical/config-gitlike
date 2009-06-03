@@ -407,8 +407,17 @@ sub cast {
     return $v unless defined $args{as};
     if ($args{as} =~ /bool/i) {
         return 1 unless defined $v;
-        return $v =~ /true|yes|on|1/;
+        if ( $v =~ /^(?:true|yes|on|-?0*1)$/i ) {
+            return 1;
+        } elsif ($v =~ /^(?:false|no|off|0*)$/i) {
+            return 0;
+        } else {
+            die "Invalid bool $args{value}\n";
+        }
     } elsif ($args{as} =~ /int|num/) {
+        die "Invalid unit while casting to $args{as}\n"
+            unless $v =~ /^[0-9]*\.?[0-9]*[kmg]?$/;
+
         if ($v =~ s/([kmg])$//) {
             $v *= 1024 if $1 eq "k";
             $v *= 1024*1024 if $1 eq "m";

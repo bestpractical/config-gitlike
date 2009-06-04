@@ -200,6 +200,20 @@ sub load_user {
     return $self->load_file( $self->user_file );
 }
 
+sub _read_config {
+    my $self = shift;
+    my $filename = shift;
+
+    open(my $fh, "<", $filename) or return;
+
+    my $c = do {local $/; <$fh>};
+
+    $c =~ s/\n*$/\n/; # Ensure it ends with a newline
+    close $fh;
+
+    return $c;
+}
+
 =head2 load_file $filename
 
 Takes a string containing the path to a file, opens it if it exists, loads its
@@ -211,9 +225,7 @@ of the C<data> attribute (a hashref).
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
-    open(my $fh, "<", $filename) or return;
-    my $c = do {local $/; <$fh>};
-    close $fh;
+    my $c = $self->_read_config($filename);
 
     $self->parse_content(
         content  => $c,
@@ -616,10 +628,7 @@ sub set {
         return;
     }
 
-    open(my $fh, "<", $args{filename}) or return;
-    my $c = do {local $/; <$fh>};
-    $c =~ s/\n*$/\n/; # Ensure it ends with a newline
-    close $fh;
+    my $c = $self->_read_config($args{filename});
 
     my $new;
     my @replace;

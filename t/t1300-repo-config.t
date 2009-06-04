@@ -463,14 +463,22 @@ EOF
 
 is(slurp($config_filename), $expect, 'new variable inserts into proper section');
 
-TODO: {
-    local $TODO = 'rename_section is not yet implemented';
+# testing rename_section
+burp($config_filename,
+'# Hallo
+	#Bello
+[branch "eins"]
+	x = 1
+[branch.eins]
+	y = 1
+	[branch "1 234 blabl/a"]
+weird
+');
 
-    lives_ok { $config->rename_section( from => 'branch.eins', to =>
-            'branch.zwei', filename => $config_filename ) }
-        'rename_section lives';
+lives_ok { $config->rename_section( from => 'branch.eins', to => 'branch.zwei',
+        filename => $config_filename ) } 'rename_section lives';
 
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [branch "zwei"]
     x = 1
 [branch "zwei"]
@@ -478,21 +486,22 @@ TODO: {
     [branch "1 234 blabl/a"]
 weird
 EOF
-    ;
-    is(slurp($config_filename), $expect, 'rename succeeded');
+;
 
-    throws_ok { $config->rename_section( from => 'branch."world domination"', to =>
+is(slurp($config_filename), $expect, 'rename succeeded');
+
+throws_ok { $config->rename_section( from => 'branch."world domination"', to =>
         'branch.drei', filename => $config_filename ) }
-        qr/rename non-existing section/, 'rename non-existing section';
+    qr/rename non-existing section/, 'rename non-existing section';
 
-    is(slurp($config_filename), $expect,
-        'rename non-existing section changes nothing');
+is(slurp($config_filename), $expect,
+    'rename non-existing section changes nothing');
 
-    lives_ok { $config->rename_section( from => 'branch."1 234 blaba/a"', to =>
-            'branch.drei', filename => $config_filename ) }
-        'rename another section';
+lives_ok { $config->rename_section( from => 'branch."1 234 blaba/a"', to =>
+        'branch.drei', filename => $config_filename ) }
+    'rename another section';
 
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [branch "zwei"]
 	x = 1
 [branch "zwei"]
@@ -500,10 +509,9 @@ EOF
 [branch "drei"]
 weird
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'rename succeeded');
-}
+is(slurp($config_filename), $expect, 'rename succeeded');
 
 TODO: {
     local $TODO = 'remove section is not yet implemented';

@@ -479,11 +479,13 @@ lives_ok { $config->rename_section( from => 'branch.eins', to => 'branch.zwei',
         filename => $config_filename ) } 'rename_section lives';
 
 $expect = <<'EOF'
+# Hallo
+	#Bello
 [branch "zwei"]
-    x = 1
+	x = 1
 [branch "zwei"]
-    y = 1
-    [branch "1 234 blabl/a"]
+	y = 1
+	[branch "1 234 blabl/a"]
 weird
 EOF
 ;
@@ -492,16 +494,18 @@ is(slurp($config_filename), $expect, 'rename succeeded');
 
 throws_ok { $config->rename_section( from => 'branch."world domination"', to =>
         'branch.drei', filename => $config_filename ) }
-    qr/rename non-existing section/, 'rename non-existing section';
+    qr/no such section/i, 'rename non-existing section';
 
 is(slurp($config_filename), $expect,
     'rename non-existing section changes nothing');
 
-lives_ok { $config->rename_section( from => 'branch."1 234 blaba/a"', to =>
+lives_ok { $config->rename_section( from => 'branch."1 234 blabl/a"', to =>
         'branch.drei', filename => $config_filename ) }
     'rename another section';
 
 $expect = <<'EOF'
+# Hallo
+	#Bello
 [branch "zwei"]
 	x = 1
 [branch "zwei"]
@@ -524,6 +528,8 @@ TODO: {
             filename => $config_filename ) } 'remove section';
 
     $expect = <<'EOF'
+# Hallo
+	#Bello
 [branch "drei"]
 weird
 EOF

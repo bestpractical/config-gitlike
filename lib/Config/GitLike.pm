@@ -819,34 +819,45 @@ sub rename_section {
 
     my @replace;
     my $prev_matched = 0;
-    my $prev_offset = 0;
     $self->parse_content(
         content  => $c,
         callback => sub {
             my %got = @_;
-            $replace[-1]->{section_is_last} = 0 if (@replace && !defined($got{name}));
+
+            $replace[-1]->{section_is_last} = 0
+                if (@replace && !defined($got{name}));
+
             if (lc($got{section}) eq lc($args{from})) {
-                # if we're removing rather than replacing, increase
-                # the length of the previous match so when it's
-                # replaced it will kill all the way up to the
-                # beginning of this next section
                 if (defined $got{name}) {
+                    # if we're removing rather than replacing and
+                    # there was a previous section match, increase
+                    # its length so it will kill this variable
+                    # assignment too
                     if ($prev_matched && !defined $args{to} ) {
-                        $replace[-1]->{length} += $got{offset} + $got{length} -
-                            ($replace[-1]{offset} + $replace[-1]->{length});
+                        $replace[-1]->{length} += ($got{offset} + $got{length})
+                            - ($replace[-1]{offset} + $replace[-1]->{length});
                     }
                 } else {
+                    # if we're removing rather than replacing, increase
+                    # the length of the previous match so when it's
+                    # replaced it will kill all the way up to the
+                    # beginning of this next section
                     $replace[-1]->{length} += $got{offset} -
-                        ($replace[-1]->{offset} + $replace[-1]->{length}) if
-                        @replace && $prev_matched && !defined($args{to});
-                    # modify section_is_last later if we find another section
-                    # after it (as well as modifying length)
-                    push @replace, {offset => $got{offset}, length => $got{length},
-                        section_is_last => 1};
+                        ($replace[-1]->{offset} + $replace[-1]->{length})
+                        if @replace && $prev_matched && !defined($args{to});
+
+                    push @replace, {offset => $got{offset}, length =>
+                        $got{length}, section_is_last => 1};
                     $prev_matched = 1;
                 }
             } else {
-                $replace[-1]->{length} += $got{offset} - ($replace[-1]->{offset} + $replace[-1]->{length}) if @replace && $prev_matched && !defined($args{to});
+                # if we're removing rather than replacing and there was
+                # a previous section match, increase its length to kill all
+                # the way up to this non-matching section (takes care
+                # of newlines between here and there, etc.)
+                $replace[-1]->{length} += $got{offset} -
+                    ($replace[-1]->{offset} + $replace[-1]->{length})
+                    if @replace && $prev_matched && !defined($args{to});
                 $prev_matched = 0;
             }
         },
@@ -871,6 +882,8 @@ sub rename_section {
         substr(
             $c,
             $header->{offset} + $difference,
+            # if we're removing the last section, just kill all the way to the
+            # end of the file
             !defined($args{to}) && $header->{section_is_last} ? length($c) -
                 ($header->{offset} + $difference) : $header->{length},
             $replace_with,

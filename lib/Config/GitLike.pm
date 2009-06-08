@@ -470,7 +470,7 @@ sub cast {
         }
     } elsif ($args{as} =~ /int|num/) {
         die "Invalid unit while casting to $args{as}\n"
-            unless $v =~ /^[0-9]*\.?[0-9]*[kmg]?$/;
+            unless $v =~ /^-?[0-9]*\.?[0-9]*[kmg]?$/;
 
         if ($v =~ s/([kmg])$//) {
             $v *= 1024 if $1 eq "k";

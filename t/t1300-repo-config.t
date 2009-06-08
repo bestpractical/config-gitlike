@@ -664,14 +664,16 @@ $expect = <<'EOF'
 EOF
 ;
 
-# test_expect_success 'set --int' '
+$config->set( key => 'int.val1', value => '01', filename => $config_filename,
+    as => 'int' );
+$config->set( key => 'int.val2', value => '-1', filename => $config_filename,
+    as => 'int' );
+$config->set( key => 'int.val3', value => '5m', filename => $config_filename,
+    as => 'int' );
 
-#     git config --int int.val1 01 &&
-#     git config --int int.val2 -1 &&
-#     git config --int int.val3 5m &&
-#     cmp expect .git/config'
+is(slurp($config_filename), $expect, 'set --int');
 
-# unlink $config_filename;
+unlink $config_filename;
 
 # $expect = <<'EOF'
 # [bool]

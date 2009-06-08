@@ -32,7 +32,7 @@ has 'multiple' => (
 
 =head1 NAME
 
-Config::GitLike - git-compatible config file parsing
+Config::GitLike - (mostly) git-compatible config file parsing
 
 =head1 SYNOPSIS
 
@@ -200,6 +200,7 @@ sub load_user {
     return $self->load_file( $self->user_file );
 }
 
+# returns undef if the file was unable to be opened
 sub _read_config {
     my $self = shift;
     my $filename = shift;
@@ -282,10 +283,22 @@ sub parse_content {
         if ($c =~ s/\A[#;].*?$//im) {
             next;
         # [sub]section headers of the format [section "subsection"] (with
-        # unlimited whitespace between). variable definitions may directly
-        # follow the section header, on the same line!
-        } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"(.*?)")?\]//im) {
+        # unlimited whitespace between) or [section.subsection] variable
+        # definitions may directly follow the section header, on the same line!
+        # - rules for sections: not case sensitive, only alphanumeric
+        #   characters, -, and . allowed
+        # - rules for subsections enclosed in ""s: case sensitive, can
+        #   contain any character except newline, " and \ must be escaped
+        # - rules for subsections with section.subsection alternate syntax:
+        #   same rules as for sections
+        } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]//im) {
             $section = lc $1;
+            return $args{error}->(
+                content => $args{content},
+                offset =>  $offset,
+                # don't allow quoted subsections to contain unquoted
+                # double-quotes or backslashes
+            ) if $2 && $2 =~ /(?<!\\)(?:"|\\)/;
             $section .= ".$2" if defined $2;
             $args{callback}->(
                 section    => $section,
@@ -379,6 +392,17 @@ sub parse_content {
     }
 }
 
+=head2 define( section => 'str, name => 'str', value => 'str' )
+
+Given a section, a key name, and a value¸ store this information
+in memory in the config object. (In the C<data> attribute if you
+must know.)
+
+Returns the value that was just defined on success, or nothing
+if no name is given and thus the key cannot be defined.
+
+=cut
+
 sub define {
     my $self = shift;
     my %args = (
@@ -446,12 +470,15 @@ sub cast {
     }
 }
 
-=head2 get( key => 'foo', as => 'int', filter => qr/regex$/ )
+=head2 get( key => 'sect.subsect.key', as => 'int', filter => qr/regex$/ )
 
 Retrieve the config value associated with C<key> cast as an C<as>.
 
 The C<key> option is required (will return undef if unspecified); the C<as>
-option is not (will return a string by default).
+option is not (will return a string by default). Sections and subsections
+are specified in the key by separating them from the key name with a .
+character. Sections, subsections, and keys may all be quoted (double or
+single quotes).
 
 If C<key> doesn't exist in the config, undef is returned. Dies with
 the exception "Multiple values" if the given key has more than one
@@ -475,6 +502,9 @@ sub get {
         @_,
     );
     $self->load unless $self->is_loaded;
+
+    $args{key} = $self->_remove_balanced_quotes($args{key});
+
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     if (ref $v) {
@@ -482,6 +512,20 @@ sub get {
     } else {
         return $self->cast( value => $v, as => $args{as} );
     }
+}
+
+# I'm pretty sure that someone can come up with an edge case where stripping
+# all balanced quotes like this is not the right thing to do, but I don't
+# see it actually being a problem in practice.
+sub _remove_balanced_quotes {
+    my $self = shift;
+    my $key = shift;
+
+    no warnings 'uninitialized';
+    $key = join '', map { s/"(.*)"/$1/; $_ } split /("[^"]+"|[^.]+)/, $key;
+    $key = join '', map { s/'(.*)'/$1/; $_ } split /('[^']+'|[^.]+)/, $key;
+
+    return $key;
 }
 
 =head2 get_all( key => 'foo', filter => qr/regex$/, as => 'bool' )
@@ -503,6 +547,8 @@ sub get_all {
         @_,
     );
     $self->load unless $self->is_loaded;
+    $args{key} = $self->_remove_balanced_quotes($args{key});
+
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     my @v = ref $v ? @{$v} : ($v);
@@ -534,22 +580,33 @@ sub dump {
     return $data;
 }
 
-=head2 format_section 'section.subsection'
+=head2 format_section( section => 'section.subsection', bare => 1 )
 
 Return a string containing the section/subsection header, formatted
-as it should appear in a config file.
+as it should appear in a config file. If C<bare> is true, the returned
+value is not followed be a newline.
 
 =cut
 
 sub format_section {
     my $self = shift;
-    my $section = shift;
-    if ($section =~ /^(.*?)\.(.*)$/) {
+
+    my %args = (
+        section => undef,
+        bare    => undef,
+        @_,
+    );
+
+    if ($args{section} =~ /^(.*?)\.(.*)$/) {
         my ($section, $subsection) = ($1, $2);
         $subsection =~ s/(["\\])/\\$1/g;
-        return qq|[$section "$subsection"]\n|;
+        my $ret = qq|[$section "$subsection"]|;
+        $ret .= "\n" unless $args{bare};
+        return $ret;
     } else {
-        return qq|[$section]\n|;
+        my $ret = qq|[$args{section}]|;
+        $ret .= "\n" unless $args{bare};
+        return $ret;
     }
 }
 
@@ -586,9 +643,12 @@ given filename. It's necessary to specify the filename since the C<confname> att
 is not unambiguous enough to determine where to write to. (There may be multiple config
 files in different directories which inherit.)
 
+Replaces values if C<key> already exists.
+
 To unset a key, pass in C<key> but not C<value>.
 
-Returns nothing.
+Returns true on success, false if the filename was unopenable and thus no
+set was performed.
 
 TODO The filter arg is for multiple value support (see value_regex in git help config
 for details).
@@ -611,7 +671,9 @@ sub set {
         unless defined $args{multiple};
 
     $args{key} =~ /^(?:(.*)\.)?(.*)$/;
-    my($section, $key) = ($1, $2);
+    my($section, $key) = map { $self->_remove_balanced_quotes($_) }
+        grep { defined $_ } ($1, $2);
+
     die "No section given in key or invalid key $args{key}\n"
         unless defined $section;
 
@@ -622,7 +684,7 @@ sub set {
             unless defined $args{value};
         open(my $fh, ">", $args{filename})
             or die "Can't write to $args{filename}: $!\n";
-        print $fh $self->format_section($section);
+        print $fh $self->format_section(section => $section);
         print $fh $self->format_definition( key => $key, value => $args{value} );
         close $fh;
         return;
@@ -678,7 +740,7 @@ sub set {
                 );
             } else {
                 # Adding a new section
-                $c .= $self->format_section($section);
+                $c .= $self->format_section( section => $section );
                 $c .= $self->format_definition( key => $key, value => $args{value} );
             }
         } else {
@@ -696,13 +758,7 @@ sub set {
         }
     }
 
-    sysopen($fh, "$args{filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
-        or die "Can't open $args{filename}.lock for writing: $!\n";
-    syswrite($fh, $c);
-    close($fh);
-
-    rename("$args{filename}.lock", $args{filename})
-        or die "Can't rename $args{filename}.lock to $args{filename}: $!\n";
+    return $self->_write_config($args{filename}, $c);
 }
 
 # according to git test suite, keys cannot start with a number
@@ -711,6 +767,146 @@ sub _invalid_key {
     my $key = shift;
 
     return $key =~ /^[0-9]/;
+}
+
+# write config with locking
+sub _write_config {
+    my($self, $filename, $content) = @_;
+
+    # write new config file to disk
+    sysopen(my $fh, "${filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
+        or die "Can't open ${filename}.lock for writing: $!\n";
+    syswrite($fh, $content);
+    close($fh);
+
+    rename("${filename}.lock", ${filename})
+        or die "Can't rename ${filename}.lock to ${filename}: $!\n";
+}
+
+=head2 rename_section( from => 'name.subname', to => 'new.subnew', filename => '/file/to/edit' )
+
+Rename the section existing in C<filename> given by C<from> to the section
+given by C<to>.
+
+Throws an exception C<no such section> if the section in C<from> doesn't exist
+in C<filename>.
+
+If no value is given for C<to>, the section is removed instead of renamed.
+
+Returns true on success, false if C<filename> was un-openable and thus
+the rename did nothing.
+
+=cut
+
+sub rename_section {
+    my $self = shift;
+
+    my (%args) = (
+        from        => undef,
+        to          => undef,
+        filename    => undef,
+        @_
+    );
+
+    die "No section to rename from given\n" unless defined $args{from};
+
+    my $c = $self->_read_config($args{filename});
+    # file couldn't be opened = nothing to rename
+    return if !defined($c);
+
+    ($args{from}, $args{to}) = map { $self->_remove_balanced_quotes($_) }
+                                grep { defined $_ } ($args{from}, $args{to});
+
+    my @replace;
+    my $prev_matched = 0;
+    my $prev_offset = 0;
+    $self->parse_content(
+        content  => $c,
+        callback => sub {
+            my %got = @_;
+            $replace[-1]->{section_is_last} = 0 if (@replace && !defined($got{name}));
+            if (lc($got{section}) eq lc($args{from})) {
+                # if we're removing rather than replacing, increase
+                # the length of the previous match so when it's
+                # replaced it will kill all the way up to the
+                # beginning of this next section
+                if (defined $got{name}) {
+                    if ($prev_matched && !defined $args{to} ) {
+                        $replace[-1]->{length} += $got{offset} + $got{length} -
+                            ($replace[-1]{offset} + $replace[-1]->{length});
+                    }
+                } else {
+                    $replace[-1]->{length} += $got{offset} -
+                        ($replace[-1]->{offset} + $replace[-1]->{length}) if
+                        @replace && $prev_matched && !defined($args{to});
+                    # modify section_is_last later if we find another section
+                    # after it (as well as modifying length)
+                    push @replace, {offset => $got{offset}, length => $got{length},
+                        section_is_last => 1};
+                    $prev_matched = 1;
+                }
+            } else {
+                $replace[-1]->{length} += $got{offset} - ($replace[-1]->{offset} + $replace[-1]->{length}) if @replace && $prev_matched && !defined($args{to});
+                $prev_matched = 0;
+            }
+        },
+        error    => sub {
+            die "Error parsing $args{filename}, near:\n@_\n";
+        },
+    );
+    die "No such section '$args{from}'\n"
+        unless @replace;
+
+    # if the string we're replacing with is not the same length as what's
+    # being replaced, any offsets following will be wrong. save the difference
+    # between the lengths here and add it to any offsets that follow.
+    my $difference = 0;
+
+    # rename ALL section headers that matched to
+    # (there may be more than one)
+    my $replace_with = defined $args{to} ?
+        $self->format_section( section => $args{to}, bare => 1 ) : '';
+
+    for my $header (@replace) {
+        substr(
+            $c,
+            $header->{offset} + $difference,
+            !defined($args{to}) && $header->{section_is_last} ? length($c) -
+                ($header->{offset} + $difference) : $header->{length},
+            $replace_with,
+        );
+        $difference += (length($replace_with) - $header->{length});
+    }
+
+    return $self->_write_config($args{filename}, $c);
+}
+
+=head2 remove_section( section => 'section.subsection', filename => '/file/to/edit/ )
+
+Remove the given section and all key/value pairs in that section from the file
+given by C<filename>.
+
+If C<section> does not exist in C<filename>, an exception is thrown.
+
+Returns true on success, false if C<filename> was un-openable and thus
+the rename did nothing.
+
+=cut
+
+sub remove_section {
+    my $self = shift;
+
+    my (%args) = (
+        section     => undef,
+        filename    => undef,
+        @_
+    );
+
+    die "No section given to remove\n" unless $args{section};
+
+    # remove section is just a rename to nothing
+    return $self->rename_section( from => $args{section}, filename =>
+        $args{filename} );
 }
 
 1;

@@ -702,7 +702,7 @@ sub set {
             $new = $got{offset} + $got{length};
             return unless defined $got{name};
             push @replace, {offset => $got{offset}, length => $got{length}}
-                if lc $key eq $got{name};
+                if lc $key eq lc $got{name};
         },
         error    => sub {
             die "Error parsing $args{filename}, near:\n@_\n";

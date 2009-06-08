@@ -216,36 +216,24 @@ EOF
 
 is(slurp($config_filename), $expect, 'really mean test');
 
-# note: this is a bug!
-TODO: {
-    local $TODO = "cannot handle replacing value after section w/o newline yet";
+$config->set(key => 'nextsection.nonewline', value => 'wow', filename =>
+    $config_filename);
 
-    $config->set(key => 'nextsection.nonewline', value => 'wow', filename => $config_filename);
-
-    $expect = <<'EOF'
+# NOTE: git moves the definition of the variable without a newline
+# to the next line;
+# let's not do that since we do substring replacement rather than
+# reformatting
+$expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
 		; comment
 	haha = alpha
-[nextSection]
-	nonewline = wow
+[nextSection] nonewline = wow
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'really really mean test');
-}
-
-# XXX remove this burp after un-TODOing the above block
-burp($config_filename,
-'[beta] ; silly comment # another comment
-noIndent= sillyValue ; \'nother silly comment
-
-		; comment
-	haha = alpha
-[nextSection]
-	nonewline = wow
-');
+is(slurp($config_filename), $expect, 'really really mean test');
 
 $config->load;
 is($config->get(key => 'beta.haha'), 'alpha', 'get value');
@@ -258,8 +246,7 @@ $expect = <<'EOF'
 noIndent= sillyValue ; 'nother silly comment
 
 		; comment
-[nextSection]
-	nonewline = wow
+[nextSection] nonewline = wow
 EOF
 ;
 
@@ -276,8 +263,7 @@ TODO: {
 noIndent= sillyValue ; 'nother silly comment
 
 		; comment
-[nextSection]
-	nonewline = wow
+[nextSection] nonewline = wow
 	NoNewLine = wow2 for me
 EOF
     ;
@@ -302,11 +288,11 @@ EOF
         filename => $config_filename);
 
     $expect = <<'EOF'
+[beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
         ; comment
-[nextSection]
-    nonewline = wow3
+[nextSection] nonewline = wow3
     NoNewLine = wow2 for me
 EOF
     ;
@@ -328,6 +314,7 @@ EOF
         "multivar unset doesn't crash";
 
     $expect = <<'EOF'
+[beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
 		; comment
@@ -338,6 +325,17 @@ EOF
 
     is(slurp($config_filename), $expect, 'multivar unset');
 }
+
+# XXX remove this burp after fixing the replace/unset all stuff above (just
+# using it to bootstrap the rest of the tests)
+burp($config_filename,
+'[beta] ; silly comment # another comment
+noIndent= sillyValue ; \'nother silly comment
+
+		; comment
+[nextSection]
+	NoNewLine = wow2 for me
+');
 
 throws_ok { $config->set(key => 'inval.2key', value => 'blabla', filename =>
         $config_filename) } qr/invalid key/i, 'invalid key';

@@ -779,40 +779,6 @@ EOF
 $config->load;
 is($config->dump, $expect, 'value continued on next line');
 
-# TODO NUL-byte termination is not supported by the current interface and I'm
-# not sure it would be useful to do so
-# burp($config_filename,
-# '[section "sub=section"]
-# 	val1 = foo=bar
-# 	val2 = foo\nbar
-# 	val3 = \n\n
-# 	val4 =
-# 	val5
-# ');
-
-# $expect = <<'EOF'
-# section.sub=section.val1
-# foo=barQsection.sub=section.val2
-# foo
-# barQsection.sub=section.val3
-#
-#
-# Qsection.sub=section.val4
-# Qsection.sub=section.val5Q
-# EOF
-#
-#
-# -- kill the tests or implement the null flag
-#git config --null --list | perl -pe 'y/\000/Q/' > result
-#echo >>result
-#
-#is(slurp($result), $expect, '--null --list');
-#
-#git config --null --get-regexp 'val[0-9]' | perl -pe 'y/\000/Q/' > result
-#echo >>result
-#
-#is(slurp($result), $expect, '--null --get-regexp');
-
 # testing symlinked configuration
 symlink File::Spec->catfile($config_dir, 'notyet'),
     File::Spec->catfile($config_dir, 'myconfig');

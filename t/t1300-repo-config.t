@@ -9,6 +9,12 @@ use File::Temp;
 use lib 't/lib';
 use TestConfig;
 
+# Tests whose expected behaviour has been modified from that of the
+# original git-config test suite are marked with comments.
+#
+# Additional tests that were not pulled from the git-config test-suite
+# are also marked.
+
 sub slurp {
     my $file = shift;
     local( $/ ) ;
@@ -17,10 +23,12 @@ sub slurp {
 }
 
 sub burp {
-    my $file_name = shift;
-    open( my $fh, ">$file_name" ) ||
+    my ($file_name, $content, $append) = @_;
+    my $mode = $append ? '>>' : '>';
+
+    open( my $fh, $mode, $file_name ) ||
         die "can't open ${file_name}: $!";
-    print $fh @_;
+    print $fh $content;
 }
 
 # create an empty test directory in /tmp
@@ -464,6 +472,10 @@ EOF
 is(slurp($config_filename), $expect, 'new variable inserts into proper section');
 
 # testing rename_section
+
+# NOTE: added comment after [branch "1 234 blabl/a"] to check that our
+# implementation doesn't blow away trailing text after a rename like
+# git-config currently does
 burp($config_filename,
 '# Hallo
 	#Bello
@@ -471,7 +483,7 @@ burp($config_filename,
 	x = 1
 [branch.eins]
 	y = 1
-	[branch "1 234 blabl/a"]
+	[branch "1 234 blabl/a"] ; comment
 weird
 ');
 
@@ -485,7 +497,7 @@ $expect = <<'EOF'
 	x = 1
 [branch "zwei"]
 	y = 1
-	[branch "1 234 blabl/a"]
+	[branch "1 234 blabl/a"] ; comment
 weird
 EOF
 ;
@@ -503,6 +515,9 @@ lives_ok { $config->rename_section( from => 'branch."1 234 blabl/a"', to =>
         'branch.drei', filename => $config_filename ) }
     'rename another section';
 
+# NOTE: differs from current git behaviour, because the way that git handles
+# renames / variable replacement is buggy (git would write [branch "drei"]
+# without the leading tab, and then clobber anything that followed)
 $expect = <<'EOF'
 # Hallo
 	#Bello
@@ -510,34 +525,33 @@ $expect = <<'EOF'
 	x = 1
 [branch "zwei"]
 	y = 1
-[branch "drei"]
+	[branch "drei"] ; comment
 weird
 EOF
 ;
 
 is(slurp($config_filename), $expect, 'rename succeeded');
 
-TODO: {
-    local $TODO = 'remove section is not yet implemented';
-
-    burp($config_filename,
+# [branch "vier"] doesn't get interpreted as a real section
+# header because the variable definition before it means
+# that all the way to the end of that line is a part of
+# a's value
+burp($config_filename,
 '[branch "zwei"] a = 1 [branch "vier"]
-');
+', 1);
 
-    lives_ok { $config->remove_section( section => 'branch.zwei',
-            filename => $config_filename ) } 'remove section';
+lives_ok { $config->remove_section( section => 'branch.zwei',
+        filename => $config_filename ) } 'remove section';
 
-    $expect = <<'EOF'
+$expect = <<'EOF'
 # Hallo
 	#Bello
-[branch "drei"]
+[branch "drei"] ; comment
 weird
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'section was removed properly');
-
-}
+is(slurp($config_filename), $expect, 'section was removed properly');
 
 unlink $config_filename;
 

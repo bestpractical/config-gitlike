@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 65;
+use Test::More tests => 74;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -582,7 +582,8 @@ is($config->get( key => 'mega.ton', as => 'int' ), 1048576,
 
 # units that aren't k/m/g should throw an error
 
-$config->set( key => 'aninvalid.unit', value => '1auto', filename => $config_filename );
+$config->set( key => 'aninvalid.unit', value => '1auto', filename =>
+    $config_filename );
 $config->load;
 throws_ok { $config->get( key => 'aninvalid.unit', as => 'int' ) }
     qr/invalid unit/i, 'invalid unit';
@@ -608,9 +609,9 @@ my $b = 1;
 @results = reverse @results;
 while (@results) {
     if ($b) {
-        ok(pop @results, 'bool');
+        ok(pop @results, 'correct true bool from get');
     } else {
-        ok(!pop @results, 'bool');
+        ok(!pop @results, 'correct false bool from get');
     }
     $b = !$b;
 }
@@ -621,67 +622,70 @@ $config->load;
 throws_ok { $config->get( key => 'bool.nobool', as => 'bool' ) }
     qr/invalid bool/i, 'invalid bool (get)';
 
-# TODO currently the interface doesn't support casting for set. does that make sense?
-# test_expect_success 'invalid bool (set)' '
-#
-# 	test_must_fail git config --bool bool.nobool foobar'
-#
-# unlink $config_filename;
-#
-# $expect = <<'EOF'
-# [bool]
-# 	true1 = true
-# 	true2 = true
-# 	true3 = true
-# 	true4 = true
-# 	false1 = false
-# 	false2 = false
-# 	false3 = false
-# 	false4 = false
-# EOF
-#
-# test_expect_success 'set --bool' '
-#
-# 	git config --bool bool.true1 01 &&
-# 	git config --bool bool.true2 -1 &&
-# 	git config --bool bool.true3 YeS &&
-# 	git config --bool bool.true4 true &&
-# 	git config --bool bool.false1 000 &&
-# 	git config --bool bool.false2 "" &&
-# 	git config --bool bool.false3 nO &&
-# 	git config --bool bool.false4 FALSE &&
-# 	cmp expect .git/config'
-#
-# unlink $config_filename;
-#
-# $expect = <<'EOF'
-# [int]
-# 	val1 = 1
-# 	val2 = -1
-# 	val3 = 5242880
-# EOF
-#
+# test casting with set
+throws_ok { $config->set( key => 'bool.nobool', value => 'foobar',
+        as => 'bool', filename => $config_filename ) }
+        qr/invalid bool/i, 'invalid bool (set)';
+
+unlink $config_filename;
+
+for my $key (keys %pairs) {
+    $config->set( key => "bool.$key", value => $pairs{$key},
+        filename => $config_filename, as => 'bool' );
+}
+$config->load;
+
+@results = ();
+
+for my $i (1..4) {
+    push(@results, $config->get( key => "bool.true$i" ),
+        $config->get( key => "bool.false$i" ));
+}
+
+$b = 1;
+
+@results = reverse @results;
+while (@results) {
+    if ($b) {
+        is(pop @results, 'true', 'correct true bool from set');
+    } else {
+        is(pop @results, 'false', 'correct false bool from set');
+    }
+    $b = !$b;
+}
+
+unlink $config_filename;
+
+$expect = <<'EOF'
+[int]
+	val1 = 1
+	val2 = -1
+	val3 = 5242880
+EOF
+;
+
 # test_expect_success 'set --int' '
-#
-# 	git config --int int.val1 01 &&
-# 	git config --int int.val2 -1 &&
-# 	git config --int int.val3 5m &&
-# 	cmp expect .git/config'
-#
+
+#     git config --int int.val1 01 &&
+#     git config --int int.val2 -1 &&
+#     git config --int int.val3 5m &&
+#     cmp expect .git/config'
+
 # unlink $config_filename;
-#
+
 # $expect = <<'EOF'
 # [bool]
-# 	true1 = true
-# 	true2 = true
-# 	false1 = false
-# 	false2 = false
+#     true1 = true
+#     true2 = true
+#     false1 = false
+#     false2 = false
 # [int]
-# 	int1 = 0
-# 	int2 = 1
-# 	int3 = -1
+#     int1 = 0
+#     int2 = 1
+#     int3 = -1
 # EOF
-#
+# ;
+
 # TODO interface doesn't support bool-or-int (does it want to?)
 # test_expect_success 'get --bool-or-int' '
 # 	(

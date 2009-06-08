@@ -421,13 +421,15 @@ sub define {
     }
 }
 
-=head2 cast( value => 'foo', as => 'int' )
+=head2 cast( value => 'foo', as => 'int', human => 1 )
 
 Return C<value> cast into the type specified by C<as>.
 
 Valid values for C<as> are C<bool>, C<int>, or C<num>. For C<bool>, C<true>,
-C<yes>, C<on>, C<1>, and undef are translated into a true value; anything else
-is false.
+C<yes>, C<on>, C<1>, and undef are translated into a true value (for Perl);
+anything else is false. Specifying a true value for the C<human>
+arg will get you a human-readable 'true' or 'false' rather than a
+value that plays along with Perl's definition of truthiness.
 
 For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be
 multiplied by 1024, 1048576, and 1073741824, respectively, before being
@@ -444,6 +446,7 @@ sub cast {
     my %args = (
         value => undef,
         as    => undef, # bool, int, or num
+        human => undef, # true value / false value
         @_,
     );
     my $v = $args{value};
@@ -451,9 +454,17 @@ sub cast {
     if ($args{as} =~ /bool/i) {
         return 1 unless defined $v;
         if ( $v =~ /^(?:true|yes|on|-?0*1)$/i ) {
-            return 1;
+            if ( $args{human} ) {
+                return 'true';
+            } else {
+                return 1;
+            }
         } elsif ($v =~ /^(?:false|no|off|0*)$/i) {
-            return 0;
+            if ( $args{human} ) {
+                return 'false';
+            } else {
+                return 0;
+            }
         } else {
             die "Invalid bool $args{value}\n";
         }
@@ -636,16 +647,21 @@ sub format_definition {
     return $ret;
 }
 
-=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => qr/regex/ )
+=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => qr/regex/, as => 'bool' )
 
-Sets the key C<foo> in the configuration section C<section> to the value C<bar> in the
-given filename. It's necessary to specify the filename since the C<confname> attribute
-is not unambiguous enough to determine where to write to. (There may be multiple config
-files in different directories which inherit.)
+Sets the key C<foo> in the configuration section C<section> to the value C<bar>
+in the given filename. It's necessary to specify the filename since the
+C<confname> attribute is not unambiguous enough to determine where to write to.
+(There may be multiple config files in different directories which inherit.)
 
 Replaces values if C<key> already exists.
 
 To unset a key, pass in C<key> but not C<value>.
+
+If C<as> is specified as C<bool>, 'true' or 'false' will be written to the
+config file if the given value is a valid bool. If C<int> or C<num> are
+specified, only valid ints or nums will be written. An exception is
+thrown otherwise.
 
 Returns true on success, false if the filename was unopenable and thus no
 set was performed.
@@ -662,6 +678,7 @@ sub set {
         value    => undef,
         filename => undef,
         filter   => undef,
+        as       => undef,
         @_
     );
 
@@ -678,6 +695,10 @@ sub set {
         unless defined $section;
 
     die "Invalid key $key\n" if $self->_invalid_key($key);
+
+    $args{value} = $self->cast(value => $args{value}, as => $args{as},
+        human => 1)
+        if defined $args{value} && defined $args{as};
 
     unless (-f $args{filename}) {
         die "No occurrence of $args{key} found to unset in $args{filename}\n"

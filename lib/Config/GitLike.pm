@@ -425,21 +425,30 @@ sub define {
 
 Return C<value> cast into the type specified by C<as>.
 
-Valid values for C<as> are C<bool>, C<int>, or C<num>. For C<bool>, C<true>,
-C<yes>, C<on>, C<1>, and undef are translated into a true value (for Perl);
-anything else is false. Specifying a true value for the C<human>
-arg will get you a human-readable 'true' or 'false' rather than a
+Valid values for C<as> are C<bool>, C<int>, C<num>, or C<bool-or-int>. For
+C<bool>, C<true>, C<yes>, C<on>, C<1>, and undef are translated into a true
+value (for Perl); anything else is false. Specifying a true value for the
+C<human> arg will get you a human-readable 'true' or 'false' rather than a
 value that plays along with Perl's definition of truthiness.
 
 For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be
 multiplied by 1024, 1048576, and 1073741824, respectively, before being
 returned.
 
+C<bool-or-int>, as you might have guessed, gives you either
+a bool or an int depending on which one applies.
+
 TODO should numbers be truncated if C<int> is specified?
 
 If C<as> is unspecified, C<value> is returned unchanged.
 
 =cut
+
+use constant {
+    BOOL_TRUE_REGEX => qr/^(?:true|yes|on|-?0*1)$/i,
+    BOOL_FALSE_REGEX => qr/^(?:false|no|off|0*)$/i,
+    NUM_REGEX => qr/^-?[0-9]*\.?[0-9]*[kmg]?$/,
+};
 
 sub cast {
     my $self = shift;
@@ -449,28 +458,42 @@ sub cast {
         human => undef, # true value / false value
         @_,
     );
+
+    if (defined $args{as} && $args{as} eq 'bool-or-int') {
+        if ( $args{value} =~ NUM_REGEX ) {
+            $args{as} = 'int';
+        } elsif ( $args{value} =~ BOOL_TRUE_REGEX ||
+            $args{value} =~ BOOL_FALSE_REGEX ) {
+            $args{as} = 'bool';
+        } elsif ( !defined $args{value} ) {
+            $args{as} = 'bool';
+        } else {
+            die "Invalid bool-or-int '$args{value}'\n";
+        }
+    }
+
     my $v = $args{value};
     return $v unless defined $args{as};
     if ($args{as} =~ /bool/i) {
         return 1 unless defined $v;
-        if ( $v =~ /^(?:true|yes|on|-?0*1)$/i ) {
+        if ( $v =~  BOOL_TRUE_REGEX ) {
             if ( $args{human} ) {
                 return 'true';
             } else {
                 return 1;
             }
-        } elsif ($v =~ /^(?:false|no|off|0*)$/i) {
+        } elsif ($v =~ BOOL_FALSE_REGEX ) {
             if ( $args{human} ) {
                 return 'false';
             } else {
                 return 0;
             }
         } else {
-            die "Invalid bool $args{value}\n";
+            die "Invalid bool '$args{value}'\n";
         }
     } elsif ($args{as} =~ /int|num/) {
         die "Invalid unit while casting to $args{as}\n"
-            unless $v =~ /^-?[0-9]*\.?[0-9]*[kmg]?$/;
+            unless $v =~ NUM_REGEX;
 
         if ($v =~ s/([kmg])$//) {
             $v *= 1024 if $1 eq "k";
@@ -510,6 +533,7 @@ sub get {
     my %args = (
         key => undef,
         as  => undef,
+        human  => undef,
         @_,
     );
     $self->load unless $self->is_loaded;
@@ -521,7 +545,8 @@ sub get {
     if (ref $v) {
         die "Multiple values";
     } else {
-        return $self->cast( value => $v, as => $args{as} );
+        return $self->cast( value => $v, as => $args{as},
+            human => $args{human} );
     }
 }
 

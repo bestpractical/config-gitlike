@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 74;
+use Test::More tests => 83;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -675,63 +675,58 @@ is(slurp($config_filename), $expect, 'set --int');
 
 unlink $config_filename;
 
-# $expect = <<'EOF'
-# [bool]
-#     true1 = true
-#     true2 = true
-#     false1 = false
-#     false2 = false
-# [int]
-#     int1 = 0
-#     int2 = 1
-#     int3 = -1
-# EOF
-# ;
+burp($config_filename,
+'[bool]
+    true1 = on
+    true2 = yes
+    false1 = off
+    false2 = no
+[int]
+    int1 = 00
+    int2 = 01
+    int3 = -01
+');
 
-# TODO interface doesn't support bool-or-int (does it want to?)
-# test_expect_success 'get --bool-or-int' '
-# 	(
-# 		echo "[bool]"
-# 		echo true1
-# 		echo true2 = true
-# 		echo false = false
-# 		echo "[int]"
-# 		echo int1 = 0
-# 		echo int2 = 1
-# 		echo int3 = -1
-# 	) >>.git/config &&
-# 	test $(git config --bool-or-int bool.true1) = true &&
-# 	test $(git config --bool-or-int bool.true2) = true &&
-# 	test $(git config --bool-or-int bool.false) = false &&
-# 	test $(git config --bool-or-int int.int1) = 0 &&
-# 	test $(git config --bool-or-int int.int2) = 1 &&
-# 	test $(git config --bool-or-int int.int3) = -1
-#
-# '
-#
-# unlink $config_filename;
-# $expect = <<'EOF'
-# [bool]
-# 	true1 = true
-# 	false1 = false
-# 	true2 = true
-# 	false2 = false
-# [int]
-# 	int1 = 0
-# 	int2 = 1
-# 	int3 = -1
-# EOF
-#
-# test_expect_success 'set --bool-or-int' '
-# 	git config --bool-or-int bool.true1 true &&
-# 	git config --bool-or-int bool.false1 false &&
-# 	git config --bool-or-int bool.true2 yes &&
-# 	git config --bool-or-int bool.false2 no &&
-# 	git config --bool-or-int int.int1 0 &&
-# 	git config --bool-or-int int.int2 1 &&
-# 	git config --bool-or-int int.int3 -1 &&
-# 	test_cmp expect .git/config
-# '
+$config->load;
+is($config->get( key => 'bool.true1', as => 'bool-or-int', human => 1 ),
+    'true', 'get bool-or-int');
+is($config->get( key => 'bool.true2', as => 'bool-or-int', human => 1 ),
+    'true', 'get bool-or-int');
+is($config->get( key => 'bool.false1', as => 'bool-or-int', human => 1 ),
+    'false', 'get bool-or-int');
+is($config->get( key => 'bool.false2', as => 'bool-or-int', human => 1 ),
+    'false', 'get bool-or-int');
+is($config->get( key => 'int.int1', as => 'bool-or-int' ), 0,
+    'get bool-or-int');
+is($config->get( key => 'int.int2', as => 'bool-or-int' ), 1,
+    'get bool-or-int');
+is($config->get( key => 'int.int3', as => 'bool-or-int' ), -1,
+    'get bool-or-int');
+
+unlink $config_filename;
+
+$expect = <<'EOF'
+[bool]
+	true1 = true
+	false1 = false
+	true2 = true
+	false2 = false
+[int]
+	int1 = 0
+	int2 = 1
+	int3 = -1
+EOF
+;
+
+$config->set( key => 'bool.true1', value => 'true', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'bool.false1', value => 'false', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'bool.true2', value => 'yes', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'bool.false2', value => 'no', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'int.int1', value => '0', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'int.int2', value => '1', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'int.int3', value => '-1', as => 'bool-or-int', filename => $config_filename );
+
+is(slurp($config_filename), $expect, 'set bool-or-int');
 
 unlink $config_filename;
 

@@ -781,7 +781,9 @@ sub set {
             $new = $got{offset} + $got{length};
             return unless defined $got{name};
             push @replace, {offset => $got{offset}, length => $got{length}}
-                if lc $key eq lc $got{name};
+                if lc $key eq lc $got{name}
+                    && (!defined($args{filter}) ||
+                        $got{value} =~ /$args{filter}/i);
         },
         error    => sub {
             die "Error parsing $args{filename}, near:\n@_\n";
@@ -791,6 +793,8 @@ sub set {
     if ($args{multiple}) {
         die "!!!"; # Unimplemented yet
     } else {
+        # use Data::Dumper;
+        # warn Dumper(@replace);
         die "Multiple occurrences of non-multiple key?"
             if @replace > 1;
         if (defined $args{value}) {

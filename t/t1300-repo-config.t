@@ -96,16 +96,14 @@ EOF
 is(slurp($config_filename), $expect, 'similar section');
 
 # set returns nothing on success
-lives_ok { $config->set(key => 'core.penguin', value => 'kingpin', filter => qr/!blue/,
-    filename => $config_filename) } 'replace with non-match';
+lives_ok { $config->set(key => 'core.penguin', value => 'kingpin',
+        filter => '!blue', filename => $config_filename) }
+    'replace with non-match';
 
 lives_ok { $config->set(key => 'core.penguin', value => 'very blue', filter =>
-    qr/!kingpin/, filename => $config_filename) } 'replace with non-match';
+    qr/^(?!kingpin).*$/, filename => $config_filename) } 'replace with non-match';
 
-TODO: {
-    local $TODO = 'Multiple values are not yet implemented.';
-
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [core]
 	penguin = very blue
 	Movie = BadPhysics
@@ -116,8 +114,7 @@ TODO: {
 EOF
 ;
 
-    is(slurp($config_filename), $expect, 'non-match result');
-}
+is(slurp($config_filename), $expect, 'non-match result');
 
 burp($config_filename,
 '[alpha]

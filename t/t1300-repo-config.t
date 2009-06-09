@@ -373,18 +373,14 @@ EOF
 $config->load;
 is($config->dump, $expect, 'working dump');
 
-# TODO perhaps regexps could just be supported by the get interface
-TODO: {
-    local $TODO = 'get_regexp is not implemented';
+$expect = {'beta.noindent', 'sillyValue', 'nextsection.nonewline',
+    'wow2 for me'};
 
-    $expect = <<'EOF'
-beta.noindent sillyValue
-nextsection.nonewline wow2 for me
-EOF
-    ;
+# test get_regexp
 
-    lives_and { is($config->get_regexp( 'in' ), $expect) } '--get-regexp';
-}
+my %results = $config->get_regexp( key => 'in' );
+
+lives_and { is_deeply(\%results, $expect) } '--get-regexp';
 
 TODO: {
     local $TODO = 'cannot set multiple values yet';
@@ -416,15 +412,17 @@ lives_and { is($config->get( key => 'novalue.variable', filter => qr/^$/ ),
 lives_and { is($config->get( key => 'emptyvalue.variable', filter => qr/^$/ ),
     '') } 'get variable with empty value';
 
-TODO: {
-    local $TODO = "get_regexp is not implemented";
+# more get_regexp
 
-    lives_and { is($config->get_regexp( qr/novalue/ ), '') }
-        'get_regexp variable with no value';
+%results = $config->get_regexp( key => 'novalue' );
+lives_and { is_deeply(\%results, { 'novalue.variable' => undef } ) }
+    'get_regexp variable with no value';
 
-    lives_and { is($config->get_regexp( qr/novalue/ ), '') }
-        'get_regexp variable with empty value';
-}
+%results = $config->get_regexp( key => qr/emptyvalue/ );
+lives_and { is_deeply(\%results, { 'emptyvalue.variable' => '' } ) }
+    'get_regexp variable with empty value';
+
+# TODO: test get_regexp with casting
 
 # should evaluate to a true value
 ok($config->get( key => 'novalue.variable', as => 'bool' ),

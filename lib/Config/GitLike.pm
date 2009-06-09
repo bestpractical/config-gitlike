@@ -538,7 +538,7 @@ sub get {
     );
     $self->load unless $self->is_loaded;
 
-    $args{key} = $self->_remove_balanced_quotes($args{key});
+    $args{key} = lc $self->_remove_balanced_quotes($args{key});
 
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -583,12 +583,45 @@ sub get_all {
         @_,
     );
     $self->load unless $self->is_loaded;
-    $args{key} = $self->_remove_balanced_quotes($args{key});
+    $args{key} = lc $self->_remove_balanced_quotes($args{key});
 
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     my @v = ref $v ? @{$v} : ($v);
-    return map {$self->cast( value => $v, as => $args{as} )} @v;
+    return map {$self->cast( value => $_, as => $args{as} )} @v;
+}
+
+=head2 get_regexp( key => 'regex', filter => 'regex', as => 'bool' )
+
+Similar to C<get_all>, but searches for values based on a key regex.
+
+Returns a hash of name/value pairs, with values cast as C<as> if C<as> is
+specified.
+
+TODO implement filter
+
+=cut
+
+sub get_regexp {
+    my $self = shift;
+
+    my %args = (
+        key => undef,
+        as  => undef,
+        @_,
+    );
+
+    $self->load unless $self->is_loaded;
+
+    $args{key} = lc $args{key};
+
+    my %results;
+    for my $key (keys %{$self->data}) {
+        $results{$key} = $self->data->{$key}
+            if lc $key =~ $args{key};
+    }
+    return map { ($_, $self->cast( value => $results{$_}, as => $args{as} )) }
+        keys %results;
 }
 
 =head2 dump

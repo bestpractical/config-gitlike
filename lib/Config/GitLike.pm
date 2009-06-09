@@ -737,6 +737,7 @@ sub set {
         filename => undef,
         filter   => undef,
         as       => undef,
+        multiple => 0,
         @_
     );
 
@@ -769,6 +770,8 @@ sub set {
         return;
     }
 
+    # returns if the file can't be opened, since that means nothing to
+    # set/unset
     my $c = $self->_read_config($args{filename});
 
     my $new;
@@ -790,61 +793,82 @@ sub set {
         },
     );
 
-    if ($args{multiple}) {
-        die "!!!"; # Unimplemented yet
-    } else {
-        # use Data::Dumper;
-        # warn Dumper(@replace);
-        die "Multiple occurrences of non-multiple key?"
-            if @replace > 1;
-        if (defined $args{value}) {
-            if (@replace) {
-                # Replacing an existing value
-                substr(
-                    $c,
-                    $replace[0]{offset},
-                    $replace[0]{length},
+    die "Multiple occurrences of non-multiple key?"
+        if @replace > 1 && !$args{multiple};
+
+    if (defined $args{value}) {
+        if (@replace && !$args{multiple}) {
+            # Replacing existing value(s)
+
+            # if the string we're replacing with is not the same length as
+            # what's being replaced, any offsets following will be wrong. save
+            # the difference between the lengths here and add it to any offsets
+            # that follow.
+            my $difference = 0;
+
+            for my $var (@replace) {
+                my $replace_with = 
                     $self->format_definition(
                         key   => $key,
                         value => $args{value},
                         bare  => 1,
-                    )
-                );
-            } elsif (defined $new) {
-                # Adding a new value to the end of an existing block
+                    );
                 substr(
                     $c,
-                    index($c, "\n", $new)+1,
-                    0,
-                    $self->format_definition(
-                        key   => $key,
-                        value => $args{value}
-                    )
-                );
-            } else {
-                # Adding a new section
-                $c .= $self->format_section( section => $section );
-                $c .= $self->format_definition( key => $key, value => $args{value} );
+                    $var->{offset}+$difference,
+                    $var->{length},
+                    $replace_with,
+                    );
+                $difference += (length($replace_with) - $var->{length});
             }
+        } elsif (defined $new) {
+            # Adding a new value to the end of an existing block
+            substr(
+                $c,
+                index($c, "\n", $new)+1,
+                0,
+                $self->format_definition(
+                    key   => $key,
+                    value => $args{value}
+                )
+            );
         } else {
-            # Removing an existing value
-            die "No occurrence of $args{key} found to unset in $args{filename}\n"
-                unless @replace;
+            # Adding a new section
+            $c .= $self->format_section( section => $section );
+            $c .= $self->format_definition( key => $key, value => $args{value} );
+        }
+    } else {
+        # Removing an existing value
+        die "No occurrence of $args{key} found to unset in $args{filename}\n"
+            unless @replace;
 
-            my $start = rindex($c, "\n", $replace[0]{offset});
+        my $difference = 0;
+
+        for my $var (@replace) {
+            # start from either the last newline or the last section
+            # close bracket, since variable definitions can occur
+            # immediately following a section header without a \n
+            my $newline = rindex($c, "\n", $var->{offset}-$difference);
+            my $bracket = rindex($c, ']', $var->{offset}-$difference);
+            my $start = $newline > $bracket ? $newline : $bracket;
+
+            my $length =
+                index($c, "\n", $var->{offset}-$difference+$var->{length})-$start;
+
             substr(
                 $c,
                 $start,
-                index($c, "\n", $replace[0]{offset}+$replace[0]{length})-$start,
-                ""
+                $length,
+                '',
             );
+            $difference += $length;
         }
     }
 
     return $self->_write_config($args{filename}, $c);
 }
 
-# according to git test suite, keys cannot start with a number
+# according to the git test suite, keys cannot start with a number
 sub _invalid_key {
     my $self = shift;
     my $key = shift;

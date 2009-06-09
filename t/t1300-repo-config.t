@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 83;
+use Test::More tests => 84;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -140,31 +140,31 @@ burp($config_filename,
 '[beta] ; silly comment # another comment
 noIndent= sillyValue ; \'nother silly comment
 
+# empty line
 		; comment
 haha = hello
 	haha = bello
 [nextSection] noNewline = ouch
 ');
-# my $config2_filename = File::Spec->catfile($config_dir, '.config2');
-#
-# copy($config_filename, $config2_filename) or die "File cannot be copied: $!";
 
-# XXX TODO unset-all not implemented yet in Config::GitLike interface
-# test_expect_success 'multiple unset' \
-# 	'git config --unset-all beta.haha'
-#
-# $expect = <<'EOF'
-# [beta] ; silly comment # another comment
-# noIndent= sillyValue ; 'nother silly comment
-#
-# 		; comment
-# [nextSection] noNewline = ouch
-# EOF
-#
-#
-# is(slurp($config_filename), $expect, 'multiple unset is correct');
+my $config2_filename = File::Spec->catfile($config_dir, '.config2');
 
-# copy($config2_filename, $config_filename) or die "File cannot be copied: $!";
+copy($config_filename, $config2_filename) or die "File cannot be copied: $!";
+
+$config->set( key => 'beta.haha', filename => $config_filename, multiple => 1 );
+$expect = <<'EOF'
+[beta] ; silly comment # another comment
+noIndent= sillyValue ; 'nother silly comment
+
+# empty line
+		; comment
+[nextSection] noNewline = ouch
+EOF
+;
+
+is(slurp($config_filename), $expect, 'multiple unset is correct');
+
+copy($config2_filename, $config_filename) or die "File cannot be copied: $!";
 
 # XXX TODO I don't think replace/replace-all works either (what's it supposed to do?)
 # test_expect_success '--replace-all missing value' '

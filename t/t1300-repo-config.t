@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 86;
+use Test::More tests => 87;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -760,3 +760,23 @@ is($notyet->get(key => 'test.frotz'), 'nitfol',
     'can get 1st val from symlink');
 is($notyet->get(key => 'test.xyzzy'), 'rezrov',
     'can get 2nd val from symlink');
+
+### ADDITIONAL TESTS (not from the git test suite, just things that I didn't
+### see tests for and think should be tested)
+
+# weird yet valid edge case
+burp($config_filename,
+'# foo
+[section] [section2] a = 1
+b = 2
+');
+
+$config->load;
+
+$expect = <<'EOF'
+section2.a=1
+section2.b=2
+EOF
+;
+
+is($config->dump, $expect, 'section headers are valid w/out newline');

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 84;
+use Test::More tests => 86;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -101,7 +101,7 @@ lives_ok { $config->set(key => 'core.penguin', value => 'kingpin',
     'replace with non-match';
 
 lives_ok { $config->set(key => 'core.penguin', value => 'very blue', filter =>
-    qr/^(?!kingpin).*$/, filename => $config_filename) } 'replace with non-match';
+    '!kingpin', filename => $config_filename) } 'replace with non-match';
 
 $expect = <<'EOF'
 [core]
@@ -166,38 +166,23 @@ is(slurp($config_filename), $expect, 'multiple unset is correct');
 
 copy($config2_filename, $config_filename) or die "File cannot be copied: $!";
 
-# XXX TODO I don't think replace/replace-all works either (what's it supposed to do?)
-# test_expect_success '--replace-all missing value' '
-# 	test_must_fail git config --replace-all beta.haha &&
-# 	test_cmp .git/config2 .git/config
-# '
-#
-# unlink $config2_filename;
-#
-# test_expect_success '--replace-all' \
-# 	'git config --replace-all beta.haha gamma'
-#
-# $expect = <<'EOF'
-# [beta] ; silly comment # another comment
-# noIndent= sillyValue ; 'nother silly comment
-#
-# 		; comment
-# 	haha = gamma
-# [nextSection] noNewline = ouch
-# EOF
-#
-# is(slurp($config_filename), $expect, 'all replaced');
+unlink $config2_filename;
 
-# XXX remove this burp after fixing the replace/unset all stuff above (just
-# using it to bootstrap the rest of the tests)
-burp($config_filename,
-'[beta] ; silly comment # another comment
-noIndent= sillyValue ; \'nother silly comment
+lives_ok { $config->set( key => 'beta.haha', value => 'gamma', multiple => 1,
+    replace_all => 1, filename => $config_filename ) } 'replace all';
 
+$expect = <<'EOF'
+[beta] ; silly comment # another comment
+noIndent= sillyValue ; 'nother silly comment
+
+# empty line
 		; comment
 	haha = gamma
 [nextSection] noNewline = ouch
-');
+EOF
+;
+
+is(slurp($config_filename), $expect, 'all replaced');
 
 $config->set(key => 'beta.haha', value => 'alpha', filename => $config_filename);
 
@@ -205,6 +190,7 @@ $expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 	haha = alpha
 [nextSection] noNewline = ouch
@@ -224,6 +210,7 @@ $expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 	haha = alpha
 [nextSection] nonewline = wow
@@ -242,6 +229,7 @@ $expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 [nextSection] nonewline = wow
 EOF
@@ -249,90 +237,78 @@ EOF
 
 is(slurp($config_filename), $expect, 'unset');
 
-TODO: {
-    local $TODO = "multivar not yet implemented";
+$config->set(key => 'nextsection.NoNewLine', value => 'wow2 for me',
+    filter => qr/for me$/, filename => $config_filename);
 
-    $config->set(key => 'nextsection.NoNewLine', value => 'wow2 for me', filter =>
-        qr/for me$/, filename => $config_filename);
-
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 [nextSection] nonewline = wow
 	NoNewLine = wow2 for me
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'multivar');
+is(slurp($config_filename), $expect, 'multivar');
 
-    $config->load;
-    lives_ok { $config->get(key => 'nextsection.nonewline', filter => qr/!for/) }
-        'non-match';
+$config->load;
+lives_ok { $config->get(key => 'nextsection.nonewline',
+        filter => '!for') } 'non-match';
 
-    is($config->get(key => 'nextsection.nonewline', filter => qr/!for/), 'wow',
-        'non-match value');
+lives_and { is($config->get(key => 'nextsection.nonewline',
+            filter => '!for'), 'wow') } 'non-match value';
 
-    # must use get_all to get multiple values
-    throws_ok { $config->get( key => 'nextsection.nonewline' ) }
-        qr/multiple values/i, 'ambiguous get';
+# must use get_all to get multiple values
+throws_ok { $config->get( key => 'nextsection.nonewline' ) }
+    qr/multiple values/i, 'ambiguous get';
 
-    is($config->get_all(key => 'nextsection.nonewline'), ['wow', 'wow2 for me'],
-        'get multivar');
+my @results = $config->get_all(key => 'nextsection.nonewline');
+is_deeply(\@results, ['wow', 'wow2 for me'], 'get multivar');
 
-    $config->set(key => 'nextsection.nonewline', value => 'wow3', filter => qr/wow$/,
-        filename => $config_filename);
+$config->set(key => 'nextsection.nonewline', value => 'wow3', filter =>
+    qr/wow$/, filename => $config_filename);
 
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
-        ; comment
+# empty line
+		; comment
 [nextSection] nonewline = wow3
-    NoNewLine = wow2 for me
+	NoNewLine = wow2 for me
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'multivar replace');
+is(slurp($config_filename), $expect, 'multivar replace');
 
-    $config->load;
-    throws_ok { $config->set(key => 'nextsection.nonewline',
-            filename => $config_filename) }
-        qr/ambiguous unset/i, 'ambiguous unset';
+$config->load;
+throws_ok { $config->set(key => 'nextsection.nonewline',
+        filename => $config_filename) }
+    qr/Multiple occurrences of non-multiple key/i, 'ambiguous unset';
 
-    throws_ok { $config->set(key => 'somesection.nonewline',
-            filename => $config_filename) }
-        qr/No occurrence of somesection.nonewline found to unset/i,
-        'invalid unset';
+throws_ok { $config->set(key => 'somesection.nonewline',
+        filename => $config_filename) }
+    qr/No occurrence of somesection.nonewline found to unset/i,
+    'invalid unset';
 
-    lives_ok { $config->set(key => 'nextsection.nonewline',
-            filter => qr/wow3$/, filename => $config_filename) }
-        "multivar unset doesn't crash";
+lives_ok { $config->set(key => 'nextsection.nonewline',
+        filter => qr/wow3$/, filename => $config_filename) }
+    "multivar unset doesn't crash";
 
-    $expect = <<'EOF'
+$expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 [nextSection]
 	NoNewLine = wow2 for me
 EOF
-    ;
+;
 
-    is(slurp($config_filename), $expect, 'multivar unset');
-}
-
-# XXX remove this burp after fixing the replace/unset all stuff above (just
-# using it to bootstrap the rest of the tests)
-burp($config_filename,
-'[beta] ; silly comment # another comment
-noIndent= sillyValue ; \'nother silly comment
-
-		; comment
-[nextSection]
-	NoNewLine = wow2 for me
-');
+is(slurp($config_filename), $expect, 'multivar unset');
 
 throws_ok { $config->set(key => 'inval.2key', value => 'blabla', filename =>
         $config_filename) } qr/invalid key/i, 'invalid key';
@@ -347,6 +323,7 @@ $expect = <<'EOF'
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
+# empty line
 		; comment
 [nextSection]
 	NoNewLine = wow2 for me
@@ -379,21 +356,16 @@ my %results = $config->get_regexp( key => 'in' );
 
 lives_and { is_deeply(\%results, $expect) } '--get-regexp';
 
-TODO: {
-    local $TODO = 'cannot set multiple values yet';
+$config->set(key => 'nextsection.nonewline', value => 'wow4 for you',
+        filename => $config_filename, multiple => 1);
 
-    $config->set(key => 'nextsection.nonewline', value => 'wow4 for you',
-        filename => $config_filename);
+$config->load;
 
-    $expect = <<'EOF'
-wow2 for me
-wow4 for you
-EOF
-    ;
+$expect = ['wow2 for me', 'wow4 for you'];
 
-    $config->load;
-    is($config->get_all(key => 'nextsection.nonewline'), $expect, '--add');
-}
+$config->load;
+my @result = $config->get_all(key => 'nextsection.nonewline');
+is_deeply(\@result, $expect, '--add');
 
 burp($config_filename,
 '[novalue]
@@ -592,7 +564,7 @@ for my $key (keys %pairs) {
 }
 $config->load;
 
-my @results = ();
+@results = ();
 
 for my $i (1..4) {
     push(@results, $config->get( key => "bool.true$i", as => 'bool' ) eq 1,

@@ -416,6 +416,9 @@ sub define {
     my $key = join(".", grep {defined} @args{qw/section name/});
     if ($self->is_multiple($key)) {
         push @{$self->data->{$key} ||= []}, $args{value};
+    } elsif (exists $self->data->{$key}) {
+        $self->set_multiple($key);
+        $self->data->{$key} = [$self->data->{$key}, $args{value}];
     } else {
         $self->data->{$key} = $args{value};
     }
@@ -504,7 +507,7 @@ sub cast {
     }
 }
 
-=head2 get( key => 'sect.subsect.key', as => 'int', filter => qr/regex$/ )
+=head2 get( key => 'sect.subsect.key', as => 'int', filter => '!foo' )
 
 Retrieve the config value associated with C<key> cast as an C<as>.
 
@@ -524,7 +527,9 @@ configuration files since the last time they were loaded, you MUST
 call C<load> again before getting, or the returned configuration data
 may not match the configuration variables on-disk.
 
-TODO implement filter (multiple values)
+C<filter> can be given to pick a single result for a variable with
+multiple values. If the regex string begins with a !, negative
+matching rather than positive matching will be used.
 
 =cut
 
@@ -534,6 +539,7 @@ sub get {
         key => undef,
         as  => undef,
         human  => undef,
+        filter => '',
         @_,
     );
     $self->load unless $self->is_loaded;
@@ -543,11 +549,19 @@ sub get {
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     if (ref $v) {
-        die "Multiple values";
-    } else {
-        return $self->cast( value => $v, as => $args{as},
-            human => $args{human} );
+        my @results;
+        if (defined $args{filter}) {
+            if ($args{filter} =~ s/^!//) {
+                @results = grep { !/$args{filter}/i } @{$v};
+            } else {
+                @results = grep { m/$args{filter}/i } @{$v};
+            }
+        }
+        die "Multiple values" unless @results <= 1;
+        $v = $results[0];
     }
+    return $self->cast( value => $v, as => $args{as},
+        human => $args{human} );
 }
 
 # I'm pretty sure that someone can come up with an edge case where stripping
@@ -564,14 +578,13 @@ sub _remove_balanced_quotes {
     return $key;
 }
 
-=head2 get_all( key => 'foo', filter => qr/regex$/, as => 'bool' )
+=head2 get_all( key => 'foo', filter => 'regex', as => 'bool' )
 
 Like C<get>, but does not fail if the number of values for the key is not
 exactly one.
 
-Returns a list of values, cast as C<as> if C<as> is specified.
-
-TODO implement filter
+Returns a list of values, narrowed by C<filter> and cast as C<as> if these
+options are specified.
 
 =cut
 
@@ -588,6 +601,15 @@ sub get_all {
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     my @v = ref $v ? @{$v} : ($v);
+
+    if (defined $args{filter}) {
+        if ($args{filter} =~ s/^!//) {
+            @v = grep { !/$args{filter}/i } @v;
+        } else {
+            @v = grep { m/$args{filter}/i } @v;
+        }
+    }
+
     return map {$self->cast( value => $_, as => $args{as} )} @v;
 }
 
@@ -595,10 +617,8 @@ sub get_all {
 
 Similar to C<get_all>, but searches for values based on a key regex.
 
-Returns a hash of name/value pairs, with values cast as C<as> if C<as> is
-specified.
-
-TODO implement filter
+Returns a hash of name/value pairs, with values filtered by C<filter> and cast
+as C<as> if specified.
 
 =cut
 
@@ -620,6 +640,17 @@ sub get_regexp {
         $results{$key} = $self->data->{$key}
             if lc $key =~ $args{key};
     }
+
+    if (defined $args{filter}) {
+        if ($args{filter} =~ s/^!//) {
+            my @keys = grep { $results{$_} !~ m/$args{filter}/i } keys %results;
+            @results{@keys} = @results{@keys};
+        } else {
+            my @keys = grep { $results{$_} =~ m/$args{filter}/i } keys %results;
+            @results{@keys} = @results{@keys};
+        }
+    }
+
     return map { ($_, $self->cast( value => $results{$_}, as => $args{as} )) }
         keys %results;
 }
@@ -705,7 +736,7 @@ sub format_definition {
     return $ret;
 }
 
-=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => qr/regex/, as => 'bool' )
+=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => 'regex$', as => 'bool', replace_all => 1 )
 
 Sets the key C<foo> in the configuration section C<section> to the value C<bar>
 in the given filename. It's necessary to specify the filename since the
@@ -724,9 +755,6 @@ thrown otherwise.
 Returns true on success, false if the filename was unopenable and thus no
 set was performed.
 
-TODO The filter arg is for multiple value support (see value_regex in git help config
-for details).
-
 =cut
 
 sub set {
@@ -737,7 +765,7 @@ sub set {
         filename => undef,
         filter   => undef,
         as       => undef,
-        multiple => 0,
+        multiple => undef,
         @_
     );
 
@@ -783,10 +811,24 @@ sub set {
             return unless lc($got{section}) eq lc($section);
             $new = $got{offset} + $got{length};
             return unless defined $got{name};
+
+            my $matched = 0;
+            if (lc $key eq lc $got{name}) {
+                if (defined $args{filter}) {
+                    if ($args{filter} =~ /^!/) {
+                        my $filter = $args{filter};
+                        $filter =~ s/^!//;
+                        $matched = 1 if ($got{value} !~ m/$filter/i);
+                    } elsif ($got{value} =~ m/$args{filter}/i) {
+                        $matched = 1;
+                    }
+                } else {
+                    $matched = 1;
+                }
+            }
+
             push @replace, {offset => $got{offset}, length => $got{length}}
-                if lc $key eq lc $got{name}
-                    && (!defined($args{filter}) ||
-                        $got{value} =~ /$args{filter}/i);
+                if $matched;
         },
         error    => sub {
             die "Error parsing $args{filename}, near:\n@_\n";
@@ -797,7 +839,7 @@ sub set {
         if @replace > 1 && !$args{multiple};
 
     if (defined $args{value}) {
-        if (@replace && !$args{multiple}) {
+        if (@replace && (!$args{multiple} || $args{replace_all})) {
             # Replacing existing value(s)
 
             # if the string we're replacing with is not the same length as
@@ -806,21 +848,25 @@ sub set {
             # that follow.
             my $difference = 0;
 
-            for my $var (@replace) {
-                my $replace_with = 
-                    $self->format_definition(
-                        key   => $key,
-                        value => $args{value},
-                        bare  => 1,
-                    );
-                substr(
-                    $c,
-                    $var->{offset}+$difference,
-                    $var->{length},
-                    $replace_with,
-                    );
-                $difference += (length($replace_with) - $var->{length});
-            }
+            # when replacing multiple values, we combine them all into one,
+            # which is kept at the position of the last one
+            my $last = pop @replace;
+
+            # kill all values that are not last
+            ($c, $difference) = $self->_unset_variables(\@replace, $c,
+                $difference);
+
+            # substitute the last occurrence with the new value
+            substr(
+                $c,
+                $last->{offset}-$difference,
+                $last->{length},
+                $self->format_definition(
+                    key   => $key,
+                    value => $args{value},
+                    bare  => 1,
+                    ),
+                );
         } elsif (defined $new) {
             # Adding a new value to the end of an existing block
             substr(
@@ -838,34 +884,41 @@ sub set {
             $c .= $self->format_definition( key => $key, value => $args{value} );
         }
     } else {
-        # Removing an existing value
+        # Removing an existing value (unset / unset-all)
         die "No occurrence of $args{key} found to unset in $args{filename}\n"
             unless @replace;
 
-        my $difference = 0;
-
-        for my $var (@replace) {
-            # start from either the last newline or the last section
-            # close bracket, since variable definitions can occur
-            # immediately following a section header without a \n
-            my $newline = rindex($c, "\n", $var->{offset}-$difference);
-            my $bracket = rindex($c, ']', $var->{offset}-$difference);
-            my $start = $newline > $bracket ? $newline : $bracket;
-
-            my $length =
-                index($c, "\n", $var->{offset}-$difference+$var->{length})-$start;
-
-            substr(
-                $c,
-                $start,
-                $length,
-                '',
-            );
-            $difference += $length;
-        }
+        ($c, undef) = $self->_unset_variables(\@replace, $c, 0);
     }
 
     return $self->_write_config($args{filename}, $c);
+}
+
+sub _unset_variables {
+    my ($self, $variables, $c, $difference) = @_;
+
+    for my $var (@{$variables}) {
+        # start from either the last newline or the last section
+        # close bracket, since variable definitions can occur
+        # immediately following a section header without a \n
+        my $newline = rindex($c, "\n", $var->{offset}-$difference);
+        # need to add 1 here to not kill the ] too
+        my $bracket = rindex($c, ']', $var->{offset}-$difference) + 1;
+        my $start = $newline > $bracket ? $newline : $bracket;
+
+        my $length =
+            index($c, "\n", $var->{offset}-$difference+$var->{length})-$start;
+
+        substr(
+            $c,
+            $start,
+            $length,
+            '',
+        );
+        $difference += $length;
+    }
+
+    return ($c, $difference);
 }
 
 # according to the git test suite, keys cannot start with a number

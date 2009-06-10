@@ -56,6 +56,7 @@ as Perl 5.8.8.
 
 Copyright 2009 Best Practical Solutions, LLC
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Alex Vandiver <alexmv@bestpractical.com>
+Christine Spang <spang@bestpractical.com>

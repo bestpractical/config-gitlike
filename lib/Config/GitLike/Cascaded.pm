@@ -15,7 +15,7 @@ Config::GitLike::Cascaded - git-like config file parsing with cascaded inheritan
 
 =head1 SYNOPSIS
 
-B<Stop!> Do not pass go! Go directly to L<Config::GitLike> and read that
+B<Stop!> Do not pass go! Go directly to L<Config::GitLike|Config::GitLike> and read that
 instead. This is a minor variation on that which changes how the configuration
 loading works. Everything else is exactly the same. Just swap in
 C<Config::GitLike::Cascaded> where it reads C<Config::GitLike>.
@@ -63,7 +63,7 @@ __END__
 
 =head1 SEE ALSO
 
-<Config::GitLike|Config::GitLike>
+L<Config::GitLike|Config::GitLike>
 
 =head1 LICENSE
 
@@ -76,5 +76,5 @@ Copyright 2009 Best Practical Solutions, LLC
 
 =head1 AUTHORS
 
-Alex Vandiver <alexmv@bestpractical.com>
+Alex Vandiver <alexmv@bestpractical.com>,
 Christine Spang <spang@bestpractical.com>

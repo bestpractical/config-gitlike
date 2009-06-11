@@ -50,7 +50,7 @@ sub load {
     $self->load_global;
     $self->load_user;
     $self->load_dirs( $path );
-    return wantarray? %{$self->data} : $self->data;
+    return wantarray ? %{$self->data} : \%{$self->data};
 }
 
 sub dir_file {
@@ -580,8 +580,8 @@ sub set {
         return;
     }
 
-    # returns if the file can't be opened, since that means nothing to
-    # set/unset
+    # returns if the file can't be opened, since this just means create a
+    # new file
     my $c = $self->_read_config($args{filename});
 
     my $new;
@@ -970,12 +970,12 @@ written by git, and git can write any config file written by this module.
 This is an object-oriented module using L<Any::Moose|Any::Moose>. All
 subroutines are object method calls.
 
-A few methods have arguments that are always used for the same purpose:
+A few methods have parameters that are always used for the same purpose:
 
 =head2 Filenames
 
 All methods that change things in a configuration file require a filename to
-write to, via the C<filename> argument. Since a C<Config::GitLike> object can
+write to, via the C<filename> parameter. Since a C<Config::GitLike> object can
 be working with multiple config files that inherit from each other, we don't
 try to figure out which one to write to automatically and let you specify
 instead.
@@ -986,7 +986,7 @@ All get and set methods can make sure the values they're returning or
 setting are valid values of a certain type: C<bool>, C<int>,
 C<num>, or C<bool-or-int> (or at least as close as Perl can get
 to having these types). Do this by passing one of these types
-in via the C<as> argument. The set method, if told to write
+in via the C<as> parameter. The set method, if told to write
 bools, will always write "true" or "false" (not anything else that
 C<cast> considers a valid bool).
 
@@ -1000,7 +1000,7 @@ for each type.
 =head2 Filtering
 
 All get and set methods can filter what values they return via their
-C<filter> argument, which is expected to be a string that is a valid
+C<filter> parameter, which is expected to be a string that is a valid
 regex. If you want to filter items OUT instead of IN, you can
 prefix your regex with a ! and that'll do the trick.
 
@@ -1036,19 +1036,19 @@ C<confname>(if they exist). Configuration variables loaded later
 override those loaded earlier, so variables from the directory
 configuration file have the highest precedence.
 
-Returns a hash of all loaded configuration data stored in the module
-after the files have been loaded, as a reference or a hash depending on
-context.
+Returns a hash copy of all loaded configuration data stored in the module
+after the files have been loaded, or a hashref to this hash in
+scalar context.
 
 =head2 get
 
-Params:
+Parameters:
 
     key => 'sect.subsect.key'
     as => 'int'
     filter => '!foo
 
-Retrieve the config value associated with C<key> cast as an C<as>.
+Return the config value associated with C<key> cast as an C<as>.
 
 The C<key> option is required (will return undef if unspecified); the C<as>
 option is not (will return a string by default). Sections and subsections
@@ -1067,7 +1067,7 @@ configuration data may not match the configuration variables on-disk.
 
 =head2 get_all
 
-Params:
+Parameters:
 
     key => 'section.sub'
     filter => 'regex'
@@ -1080,7 +1080,7 @@ Returns a list of values (or an arrayref in scalar context).
 
 =head2 get_regexp
 
-Params:
+Parameters:
 
     key => 'regex'
     filter => 'regex'
@@ -1104,7 +1104,7 @@ In list context, returns a hash containing all the configuration data.
 
 =head2 set
 
-Params:
+Parameters:
 
     key => 'section.name'
     value => 'bar'
@@ -1121,8 +1121,7 @@ Replace C<key>'s value if C<key> already exists.
 
 To unset a key, pass in C<key> but not C<value>.
 
-Returns true on success, undef if the filename was unopenable and thus no
-set was performed.
+Returns true on success.
 
 =head3 multiple values
 
@@ -1133,7 +1132,7 @@ in C<replace_all =E<gt> 1> as well.
 
 =head2 rename_section
 
-Params:
+Parameters:
 
     from => 'name.subname'
     to => 'new.subname'
@@ -1147,12 +1146,12 @@ in C<filename>.
 
 If no value is given for C<to>, the section is removed instead of renamed.
 
-Returns true on success, false if C<filename> was un-openable and thus
+Returns true on success, false if C<filename> didn't exist and thus
 the rename did nothing.
 
 =head2 remove_section
 
-Params:
+Parameters:
 
     section => 'section.subsection'
     filename => '/file/to/edit
@@ -1162,12 +1161,11 @@ Removes the given section (which you can do by renaming to nothing as well).
 
 =head1 METHODS YOU MAY WISH TO OVERRIDE
 
-If your configuration layout is different from the default, e.g. if
-your home directory config files are in a directory within the
-home directory (like C<~/.git/config>) instead of just
-dot-prefixed, override these methods to return the right
-directory names. For fancier things like altering precedence,
-you'll need to override L<"load"> as well.
+If your application's configuration layout is different from the default, e.g.
+if its home directory config files are in a directory within the home
+directory (like C<~/.git/config>) instead of just dot-prefixed, override these
+methods to return the right directory names. For fancier things like altering
+precedence, you'll need to override L<"load"> as well.
 
 =head2 dir_file
 
@@ -1176,8 +1174,8 @@ name C<confname> in a directory. The directory isn't specified here.
 
 =head2 global_file
 
-Return a string representing the path to a system-wide configuration file with
-name C<confname>.
+Return the string C</etc/confname>, the absolute name of the system-wide
+configuration file with name C<confname>.
 
 =head2 user_file
 
@@ -1187,27 +1185,15 @@ in the current user's home directory with filename C<confname>.
 =head2 load_dirs
 
 Load the configuration file with the filename L<"dir_file"> in the current
-working directory into the C<data> attribute or, if there is no config
-matching C<dir_file> in the current working directory, walk up the directory
-tree until one is found. (No error is thrown if none is found.)
+working directory into the memory or, if there is no config matching
+C<dir_file> in the current working directory, walk up the directory tree until
+one is found. (No error is thrown if none is found.)
 
 Returns nothing of note.
 
 =head1 OTHER METHODS
 
-These are mostly used internally, but hey, maybe you'll need them for
-something.
-
-=head2 set_multiple( $name )
-
-Mark the key string C<$name> as containing multiple values.
-
-Returns nothing.
-
-=head2 is_multiple( $name )
-
-Return a true value if the key string C<$name> contains multiple values; false
-otherwise.
+These are mostly used internally in other methods, but could be useful anyway.
 
 =head2 load_global
 
@@ -1239,13 +1225,10 @@ Parameters:
     callback => sub {}
     error => sub {}
 
-Takes arguments consisting of C<content>, a string of the content of the
-configuration file to be parsed, C<callback>, a submethod to run on information
-retrieved from the config file (headers, subheaders, and key/value pairs), and
-C<error>, a submethod to run on malformed content. Parses the given content
-and runs callbacks as it finds valid information.
+Parses the given content and runs callbacks as it finds valid information.
 
-Returns undef on success and C<error($content)> on failure.
+Returns undef on success and C<error($content)> (the original content) on
+failure.
 
 C<callback> is called like:
 
@@ -1258,9 +1241,22 @@ C<error> is called like:
 
     error( content => $content, offset => $offset )
 
+Where C<offset> is the point in the content where the parse error occurred.
+
+=head2 set_multiple( $name )
+
+Mark the key string C<$name> as containing multiple values.
+
+Returns nothing.
+
+=head2 is_multiple( $name )
+
+Return a true value if the key string C<$name> contains multiple values; false
+otherwise.
+
 =head2 define
 
-Params:
+Parameters:
 
     section => 'str'
     name => 'str'
@@ -1274,7 +1270,7 @@ if no name is given and thus the key cannot be defined.
 
 =head2 cast
 
-Params:
+Parameters:
 
     value => 'foo'
     as => 'int'
@@ -1300,7 +1296,7 @@ If C<as> is unspecified, C<value> is returned unchanged.
 
 =head2 format_section
 
-Params:
+Parameters:
 
     section => 'section.subsection'
     base => 1
@@ -1311,7 +1307,7 @@ value is not followed be a newline.
 
 =head2 format_definition
 
-Params:
+Parameters:
 
     key => 'str'
     value => 'str'
@@ -1333,7 +1329,7 @@ configuration files or code snippets.
 =head1 SEE ALSO
 
 L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>,
-<Config::GitLike::Cascaded|Config::GitLike::Cascaded>
+L<Config::GitLike::Cascaded|Config::GitLike::Cascaded>
 
 =head1 LICENSE
 
@@ -1346,5 +1342,5 @@ Copyright 2009 Best Practical Solutions, LLC
 
 =head1 AUTHORS
 
-Alex Vandiver <alexmv@bestpractical.com>
+Alex Vandiver <alexmv@bestpractical.com>,
 Christine Spang <spang@bestpractical.com>

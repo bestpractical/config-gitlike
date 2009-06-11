@@ -910,6 +910,10 @@ Code that uses this config module might look like:
         replace_all => 1,
     );
 
+    # make sure to reload the config files before reading if you've set
+    # any variables!
+    $c->load;
+
     # get only the value of 'section.name' that matches '2'
     $c->get( key => 'section.name', filter => '2' );
     $c->get_all( key => 'section.name' );

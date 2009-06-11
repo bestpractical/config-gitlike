@@ -568,21 +568,20 @@ for my $key (keys %pairs) {
 }
 $config->load;
 
-@results = ();
+my @results = ();
 
 for my $i (1..4) {
-    push(@results, $config->get( key => "bool.true$i", as => 'bool' ) eq 1,
-        $config->get( key => "bool.false$i", as => 'bool' ) eq 1);
+    push(@results, $config->get( key => "bool.true$i", as => 'bool' ),
+        $config->get( key => "bool.false$i", as => 'bool' ));
 }
 
 my $b = 1;
 
-@results = reverse @results;
 while (@results) {
     if ($b) {
-        ok(pop @results, 'correct true bool from get');
+        ok(shift @results, 'correct true bool from get');
     } else {
-        ok(!pop @results, 'correct false bool from get');
+        ok(!shift @results, 'correct false bool from get');
     }
     $b = !$b;
 }
@@ -615,12 +614,11 @@ for my $i (1..4) {
 
 $b = 1;
 
-@results = reverse @results;
 while (@results) {
     if ($b) {
-        is(pop @results, 'true', 'correct true bool from set');
+        is(shift @results, 'true', 'correct true bool from set');
     } else {
-        is(pop @results, 'false', 'correct false bool from set');
+        is(shift @results, 'false', 'correct false bool from set');
     }
     $b = !$b;
 }

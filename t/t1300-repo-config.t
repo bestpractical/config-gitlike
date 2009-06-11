@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 93;
+use Test::More tests => 95;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -1112,3 +1112,17 @@ $config->set(
 $config->load;
 is( $config->get( key => 'test.foo' ), '"ssh" for "kernel.org"',
     "don't strip quotes contained in value" );
+
+$config->set(
+    key => 'test.foo',
+    value => '1.542',
+    filename => $config_filename,
+);
+$config->load;
+
+# test difference between int/num casting, since git config doesn't
+# do num
+is( $config->get( key => 'test.foo', as => 'int' ), 1,
+    'int casting truncates');
+is( $config->get( key => 'test.foo', as => 'num' ), 1.542,
+    'num casting doesn\'t truncate');

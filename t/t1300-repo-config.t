@@ -683,13 +683,20 @@ $expect = <<'EOF'
 EOF
 ;
 
-$config->set( key => 'bool.true1', value => 'true', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'bool.false1', value => 'false', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'bool.true2', value => 'yes', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'bool.false2', value => 'no', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'int.int1', value => '0', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'int.int2', value => '1', as => 'bool-or-int', filename => $config_filename );
-$config->set( key => 'int.int3', value => '-1', as => 'bool-or-int', filename => $config_filename );
+$config->set( key => 'bool.true1', value => 'true', as => 'bool-or-int',
+    filename => $config_filename );
+$config->set( key => 'bool.false1', value => 'false', as => 'bool-or-int',
+    filename => $config_filename );
+$config->set( key => 'bool.true2', value => 'yes', as => 'bool-or-int',
+    filename => $config_filename );
+$config->set( key => 'bool.false2', value => 'no', as => 'bool-or-int',
+    filename => $config_filename );
+$config->set( key => 'int.int1', value => '0', as => 'bool-or-int', filename =>
+    $config_filename );
+$config->set( key => 'int.int2', value => '1', as => 'bool-or-int', filename =>
+    $config_filename );
+$config->set( key => 'int.int3', value => '-1', as => 'bool-or-int',
+    filename => $config_filename );
 
 is(slurp($config_filename), $expect, 'set bool-or-int');
 

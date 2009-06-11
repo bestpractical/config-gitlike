@@ -1321,6 +1321,26 @@ Return a string containing the key/value pair as they should be printed in the
 config file. If C<bare> is true, the returned value is not tab-indented nor
 followed by a newline.
 
+=head1 DIFFERENCES FROM GIT-CONFIG
+
+This module does the following things differently from git-config:
+
+When replacing variable values and renaming sections, we merely use
+a substring replacement rather than writing out new lines formatted in the
+default manner for new lines. Git's replacement/renaming (as of
+1.6.3.2) is currently buggy and loses trailing comments and variables
+that are defined on the same line as a section being renamed. Our
+method preserves original formatting and surrounding information.
+
+We also allow the 'num' type for casting, since in many cases we
+might want to be more lenient on numbers.
+
+We truncate decimal numbers that are cast to C<int>s, whereas
+Git just rejects them.
+
+We don't support NUL-terminating output (the --null flag to
+git-config). Who needs it?
+
 =head1 BUGS
 
 If you find any bugs in this module, report them at:

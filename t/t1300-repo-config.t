@@ -665,6 +665,9 @@ lives_ok {
 }
 'remove section';
 
+# we kill leading whitespace on section removes because it makes
+# the implementation easier (can just kill all the way up to
+# the following section or the end of the file)
 $expect = <<'EOF'
 # Hallo
 	#Bello

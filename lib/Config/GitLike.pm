@@ -776,7 +776,9 @@ sub rename_section {
                     # if we're removing rather than replacing, increase
                     # the length of the previous match so when it's
                     # replaced it will kill all the way up to the
-                    # beginning of this next section
+                    # beginning of this next section (this will kill
+                    # any leading whitespace on the line of the
+                    # next section, but that's OK)
                     $replace[-1]->{length} += $got{offset} -
                         ($replace[-1]->{offset} + $replace[-1]->{length})
                         if @replace && $prev_matched && !defined($args{to});

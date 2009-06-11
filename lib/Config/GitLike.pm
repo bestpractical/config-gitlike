@@ -1321,6 +1321,15 @@ Return a string containing the key/value pair as they should be printed in the
 config file. If C<bare> is true, the returned value is not tab-indented nor
 followed by a newline.
 
+=head1 BUGS
+
+If you find any bugs in this module, report them at:
+
+  http://rt.cpan.org/
+
+Include the version of the module you're using and any relevant problematic
+configuration files or code snippets.
+
 =head1 SEE ALSO
 
 L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>,

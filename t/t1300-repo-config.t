@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 87;
+use Test::More tests => 91;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -391,8 +391,6 @@ lives_and { is_deeply(\%results, { 'novalue.variable' => undef } ) }
 lives_and { is_deeply(\%results, { 'emptyvalue.variable' => '' } ) }
     'get_regexp variable with empty value';
 
-# TODO: test get_regexp with casting
-
 # should evaluate to a true value
 ok($config->get( key => 'novalue.variable', as => 'bool' ),
     'get bool variable with no value');
@@ -780,3 +778,30 @@ EOF
 ;
 
 is($config->dump, $expect, 'section headers are valid w/out newline');
+
+burp($config_filename,
+'# foo
+[section]
+	b = off
+	b = on
+	exact = 0
+	inexact = 01
+	delicieux = true
+');
+
+$config->load;
+
+%results = $config->get_regexp( key => 'x', as => 'bool' );
+is_deeply(\%results, { 'section.exact' => 0, 'section.inexact' => 1,
+        'section.delicieux' => 1 }, 'get_regexp casting works');
+
+%results = $config->get_regexp( key => 'x', filter => '!0' );
+is_deeply(\%results, { 'section.delicieux' => 'true' },
+    'get_regexp filter works');
+
+@results = $config->get_all( key => 'section.b', filter => 'f' );
+is_deeply(\@results, [ 'off' ], 'get_all filter works');
+
+@results = $config->get_all( key => 'section.b', as => 'bool' );
+is_deeply(\@results, [ 0, 1 ], 'get_all casting works');
+

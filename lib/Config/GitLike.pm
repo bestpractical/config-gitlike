@@ -627,6 +627,7 @@ sub get_regexp {
 
     my %args = (
         key => undef,
+        filter => undef,
         as  => undef,
         @_,
     );
@@ -637,22 +638,22 @@ sub get_regexp {
 
     my %results;
     for my $key (keys %{$self->data}) {
-        $results{$key} = $self->data->{$key}
-            if lc $key =~ $args{key};
+        $results{$key} = $self->data->{$key} if lc $key =~ m/$args{key}/i;
     }
 
     if (defined $args{filter}) {
         if ($args{filter} =~ s/^!//) {
-            my @keys = grep { $results{$_} !~ m/$args{filter}/i } keys %results;
-            @results{@keys} = @results{@keys};
+            map { delete $results{$_} if $results{$_} =~ m/$args{filter}/i }
+                keys %results;
         } else {
-            my @keys = grep { $results{$_} =~ m/$args{filter}/i } keys %results;
-            @results{@keys} = @results{@keys};
+            map { delete $results{$_} if $results{$_} !~ m/$args{filter}/i }
+                keys %results;
         }
     }
 
-    return map { ($_, $self->cast( value => $results{$_}, as => $args{as} )) }
-        keys %results;
+    @results{keys %results} = map { $self->cast( value => $results{$_}, as =>
+            $args{as} ) } keys %results;
+    return %results;
 }
 
 =head2 dump
@@ -815,11 +816,13 @@ sub set {
             my $matched = 0;
             if (lc $key eq lc $got{name}) {
                 if (defined $args{filter}) {
-                    if ($args{filter} =~ /^!/) {
-                        my $filter = $args{filter};
-                        $filter =~ s/^!//;
+                    # copy the filter arg here since this callback may
+                    # be called multiple times and we don't want to
+                    # modify the original value
+                    my $filter = $args{filter};
+                    if ($filter =~ s/^!//) {
                         $matched = 1 if ($got{value} !~ m/$filter/i);
-                    } elsif ($got{value} =~ m/$args{filter}/i) {
+                    } elsif ($got{value} =~ m/$filter/i) {
                         $matched = 1;
                     }
                 } else {

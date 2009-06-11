@@ -36,13 +36,13 @@ my $config_dir = File::Temp->newdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} );
 my $config_dirname = $config_dir->dirname;
 my $config_filename = File::Spec->catfile( $config_dirname, 'config' );
 
-diag "config file is: $config_filename";
+diag "config file is: $config_filename" if $ENV{TEST_VERBOSE};
 
 my $config
     = TestConfig->new( confname => 'config', tmpdir => $config_dirname );
 $config->load;
 
-diag('Test git config in different settings');
+diag('Test git config in different settings') if $ENV{TEST_VERBOSE};
 
 $config->set(
     key      => 'core.penguin',

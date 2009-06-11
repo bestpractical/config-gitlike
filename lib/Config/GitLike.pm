@@ -954,9 +954,8 @@ Methods that are told to cast values will throw exceptions if
 the values they're trying to cast aren't valid values of the
 given type.
 
-See the L<cast|/"cast( value =E<gt> 'foo', as => 'int', human =E<gt> 1 )">
-method documentation for more on what is considered valid for
-each type.
+See the L<"cast"> method documentation for more on what is considered valid
+for each type.
 
 =head2 Filtering
 

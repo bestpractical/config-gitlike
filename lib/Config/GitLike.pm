@@ -87,7 +87,8 @@ sub load_global {
 
 sub user_file {
     my $self = shift;
-    return File::Spec->catfile( File::HomeDir->my_home, "." . $self->confname );
+    return
+        File::Spec->catfile( File::HomeDir->my_home, "." . $self->confname );
 }
 
 sub load_user {
@@ -157,7 +158,8 @@ sub parse_content {
         #   contain any character except newline, " and \ must be escaped
         # - rules for subsections with section.subsection alternate syntax:
         #   same rules as for sections
-        } elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]//im) {
+        }
+        elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]//im) {
             $section = lc $1;
             return $args{error}->(
                 content => $args{content},
@@ -173,7 +175,8 @@ sub parse_content {
             );
         # keys followed by a unlimited whitespace and (optionally) a comment
         # (no value)
-        } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
+        }
+        elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
             $args{callback}->(
                 section    => $section,
                 name       => $1,
@@ -182,7 +185,8 @@ sub parse_content {
             );
         # key/value pairs (this particular regex matches only the key part and
         # the =, with unlimited whitespace around the =)
-        } elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
+        }
+        elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
             my $name = $1;
             my $value = "";
             # parse the value
@@ -190,26 +194,33 @@ sub parse_content {
                 # comment or no content left on line
                 if ($c =~ s/\A([ \t]*[#;].*?)?$//im) {
                     last;
+                }
                 # any amount of whitespace between words becomes a single space
-                } elsif ($c =~ s/\A[\t ]+//im) {
+                elsif ($c =~ s/\A[\t ]+//im) {
                     $value .= ' ';
+                }
                 # line continuation (\ character followed by new line)
-                } elsif ($c =~ s/\A\\\r?\n//im) {
+                elsif ($c =~ s/\A\\\r?\n//im) {
                     next;
+                }
                 # escaped quote characters are part of the value
-                } elsif ($c =~ s/\A\\(['"])//im) {
+                elsif ($c =~ s/\A\\(['"])//im) {
                     $value .= $1;
+                }
                 # escaped newline in config is translated to actual newline
-                } elsif ($c =~ s/\A\\n//im) {
+                elsif ($c =~ s/\A\\n//im) {
                     $value .= "\n";
+                }
                 # escaped tab in config is translated to actual tab
-                } elsif ($c =~ s/\A\\t//im) {
+                elsif ($c =~ s/\A\\t//im) {
                     $value .= "\t";
+                }
                 # escaped backspace in config is translated to actual backspace
-                } elsif ($c =~ s/\A\\b//im) {
+                elsif ($c =~ s/\A\\b//im) {
                     $value .= "\b";
+                }
                 # quote-delimited value (possibly containing escape codes)
-                } elsif ($c =~ s/\A"([^"\\]*(?:(?:\\\n|\\[tbn"\\])[^"\\]*)*)"//im) {
+                elsif ($c =~ s/\A"([^"\\]*(?:(?:\\\n|\\[tbn"\\])[^"\\]*)*)"//im) {
                     my $v = $1;
                     # remove all continuations (\ followed by a newline)
                     $v =~ s/\\\n//g;
@@ -222,11 +233,13 @@ sub parse_content {
                     # swap escaped \ with actual \
                     $v =~ s/\\\\/\\/g;
                     $value .= $v;
+                }
                 # valid value (no escape codes)
-                } elsif ($c =~ s/\A([^\t \\\n]+)//im) {
+                elsif ($c =~ s/\A([^\t \\\n]+)//im) {
                     $value .= $1;
                 # unparseable
-                } else {
+                }
+                else {
                     # Note that $args{content} is the _original_
                     # content, not the nibbled $c, which is the
                     # remaining unparsed content
@@ -243,11 +256,13 @@ sub parse_content {
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        }
         # end of content string; all done now
-        } elsif (not length $c) {
+        elsif (not length $c) {
             last;
+        }
         # unparseable
-        } else {
+        else {
             # Note that $args{content} is the _original_ content, not
             # the nibbled $c, which is the remaining unparsed content
             return $args{error}->(
@@ -271,10 +286,12 @@ sub define {
     my $key = join(".", grep {defined} @args{qw/section name/});
     if ($self->is_multiple($key)) {
         push @{$self->data->{$key} ||= []}, $args{value};
-    } elsif (exists $self->data->{$key}) {
+    }
+    elsif (exists $self->data->{$key}) {
         $self->set_multiple($key);
         $self->data->{$key} = [$self->data->{$key}, $args{value}];
-    } else {
+    }
+    else {
         $self->data->{$key} = $args{value};
     }
 }
@@ -297,12 +314,15 @@ sub cast {
     if (defined $args{as} && $args{as} eq 'bool-or-int') {
         if ( $args{value} =~ NUM_REGEX ) {
             $args{as} = 'int';
-        } elsif ( $args{value} =~ BOOL_TRUE_REGEX ||
+        }
+        elsif ( $args{value} =~ BOOL_TRUE_REGEX ||
             $args{value} =~ BOOL_FALSE_REGEX ) {
             $args{as} = 'bool';
-        } elsif ( !defined $args{value} ) {
+        }
+        elsif ( !defined $args{value} ) {
             $args{as} = 'bool';
-        } else {
+        }
+        else {
             die "Invalid bool-or-int '$args{value}'\n";
         }
     }
@@ -314,19 +334,24 @@ sub cast {
         if ( $v =~  BOOL_TRUE_REGEX ) {
             if ( $args{human} ) {
                 return 'true';
-            } else {
+            }
+            else {
                 return 1;
             }
-        } elsif ($v =~ BOOL_FALSE_REGEX ) {
+        }
+        elsif ($v =~ BOOL_FALSE_REGEX ) {
             if ( $args{human} ) {
                 return 'false';
-            } else {
+            }
+            else {
                 return 0;
             }
-        } else {
+        }
+        else {
             die "Invalid bool '$args{value}'\n";
         }
-    } elsif ($args{as} =~ /int|num/) {
+    }
+    elsif ($args{as} =~ /int|num/) {
         die "Invalid unit while casting to $args{as}\n"
             unless $v =~ NUM_REGEX;
 
@@ -360,7 +385,8 @@ sub get {
         if (defined $args{filter}) {
             if ($args{filter} =~ s/^!//) {
                 @results = grep { !/$args{filter}/i } @{$v};
-            } else {
+            }
+            else {
                 @results = grep { m/$args{filter}/i } @{$v};
             }
         }
@@ -402,7 +428,8 @@ sub get_all {
     if (defined $args{filter}) {
         if ($args{filter} =~ s/^!//) {
             @v = grep { !/$args{filter}/i } @v;
-        } else {
+        }
+        else {
             @v = grep { m/$args{filter}/i } @v;
         }
     }
@@ -434,7 +461,8 @@ sub get_regexp {
         if ($args{filter} =~ s/^!//) {
             map { delete $results{$_} if $results{$_} =~ m/$args{filter}/i }
                 keys %results;
-        } else {
+        }
+        else {
             map { delete $results{$_} if $results{$_} !~ m/$args{filter}/i }
                 keys %results;
         }
@@ -455,12 +483,14 @@ sub dump {
         my $str;
         if (defined $self->data->{$key}) {
             $str = "$key=".$self->data->{$key}."\n";
-        } else {
+        }
+        else {
             $str = "$key\n";
         }
         if (!defined wantarray) {
             print $str;
-        } else {
+        }
+        else {
             $data .= $str;
         }
     }
@@ -483,7 +513,8 @@ sub format_section {
         my $ret = qq|[$section "$subsection"]|;
         $ret .= "\n" unless $args{bare};
         return $ret;
-    } else {
+    }
+    else {
         my $ret = qq|[$args{section}]|;
         $ret .= "\n" unless $args{bare};
         return $ret;
@@ -572,10 +603,12 @@ sub set {
                     my $filter = $args{filter};
                     if ($filter =~ s/^!//) {
                         $matched = 1 if ($got{value} !~ m/$filter/i);
-                    } elsif ($got{value} =~ m/$filter/i) {
+                    }
+                    elsif ($got{value} =~ m/$filter/i) {
                         $matched = 1;
                     }
-                } else {
+                }
+                else {
                     $matched = 1;
                 }
             }
@@ -620,7 +653,8 @@ sub set {
                     bare  => 1,
                     ),
                 );
-        } elsif (defined $new) {
+        }
+        elsif (defined $new) {
             # Adding a new value to the end of an existing block
             substr(
                 $c,
@@ -631,12 +665,14 @@ sub set {
                     value => $args{value}
                 )
             );
-        } else {
+        }
+        else {
             # Adding a new section
             $c .= $self->format_section( section => $section );
             $c .= $self->format_definition( key => $key, value => $args{value} );
         }
-    } else {
+    }
+    else {
         # Removing an existing value (unset / unset-all)
         die "No occurrence of $args{key} found to unset in $args{filename}\n"
             unless @replace;
@@ -735,7 +771,8 @@ sub rename_section {
                         $replace[-1]->{length} += ($got{offset} + $got{length})
                             - ($replace[-1]{offset} + $replace[-1]->{length});
                     }
-                } else {
+                }
+                else {
                     # if we're removing rather than replacing, increase
                     # the length of the previous match so when it's
                     # replaced it will kill all the way up to the
@@ -748,7 +785,8 @@ sub rename_section {
                         $got{length}, section_is_last => 1};
                     $prev_matched = 1;
                 }
-            } else {
+            }
+            else {
                 # if we're removing rather than replacing and there was
                 # a previous section match, increase its length to kill all
                 # the way up to this non-matching section (takes care

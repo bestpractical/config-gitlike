@@ -583,8 +583,8 @@ sub _remove_balanced_quotes {
 Like C<get>, but does not fail if the number of values for the key is not
 exactly one.
 
-Returns a list of values, narrowed by C<filter> and cast as C<as> if these
-options are specified.
+Returns a list of values (or an arrayref in scalar context), narrowed by
+C<filter> and cast as C<as> if these options are specified.
 
 =cut
 
@@ -610,15 +610,16 @@ sub get_all {
         }
     }
 
-    return map {$self->cast( value => $_, as => $args{as} )} @v;
+    @v = map {$self->cast( value => $_, as => $args{as} )} @v;
+    return wantarray ? @v : \@v;
 }
 
 =head2 get_regexp( key => 'regex', filter => 'regex', as => 'bool' )
 
 Similar to C<get_all>, but searches for values based on a key regex.
 
-Returns a hash of name/value pairs, with values filtered by C<filter> and cast
-as C<as> if specified.
+Returns a hash of name/value pairs (or a hashref in scalar context), with
+values filtered by C<filter> and cast as C<as> if specified.
 
 =cut
 
@@ -653,32 +654,44 @@ sub get_regexp {
 
     @results{keys %results} = map { $self->cast( value => $results{$_}, as =>
             $args{as} ) } keys %results;
-    return %results;
+    return wantarray ? %results : \%results;
 }
 
 =head2 dump
 
-Return a string containing all configuration data, sorted in ASCII order, in
-the form:
+In scalar context, return a string containing all configuration data, sorted in
+ASCII order, in the form:
 
     section.key=value
     section2.key=value
 
-If you print this string, it is similar to the output of C<git config --list>.
+If called in void context, this string is printed instead.
+
+In list context, return a hash containing all the configuration data.
 
 =cut
 
 sub dump {
     my $self = shift;
+
+    return %{$self->data} if wantarray;
+
     my $data = '';
     for my $key (sort keys %{$self->data}) {
+        my $str;
         if (defined $self->data->{$key}) {
-            $data .= "$key=".$self->data->{$key}."\n";
+            $str = "$key=".$self->data->{$key}."\n";
         } else {
-            $data .= "$key\n";
+            $str = "$key\n";
+        }
+        if (!defined wantarray) {
+            print $str;
+        } else {
+            $data .= $str;
         }
     }
-    return $data;
+
+    return $data if defined wantarray;
 }
 
 =head2 format_section( section => 'section.subsection', bare => 1 )

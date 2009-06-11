@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 91;
+use Test::More tests => 92;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -264,8 +264,8 @@ lives_and { is($config->get(key => 'nextsection.nonewline',
 throws_ok { $config->get( key => 'nextsection.nonewline' ) }
     qr/multiple values/i, 'ambiguous get';
 
-my @results = $config->get_all(key => 'nextsection.nonewline');
-is_deeply(\@results, ['wow', 'wow2 for me'], 'get multivar');
+is_deeply(scalar $config->get_all(key => 'nextsection.nonewline'), ['wow',
+    'wow2 for me'], 'get multivar');
 
 $config->set(key => 'nextsection.nonewline', value => 'wow3', filter =>
     qr/wow$/, filename => $config_filename);
@@ -316,8 +316,8 @@ throws_ok { $config->set(key => 'inval.2key', value => 'blabla', filename =>
 lives_ok { $config->set(key => '123456.a123', value => '987', filename =>
         $config_filename) } 'correct key';
 
-lives_ok { $config->set(key => 'Version.1.2.3eX.Alpha', value => 'beta', filename =>
-        $config_filename) } 'correct key';
+lives_ok { $config->set(key => 'Version.1.2.3eX.Alpha', value => 'beta',
+        filename => $config_filename) } 'correct key';
 
 $expect = <<'EOF'
 [beta] ; silly comment # another comment
@@ -347,14 +347,20 @@ EOF
 $config->load;
 is($config->dump, $expect, 'working dump');
 
+### ADDITIONAL TEST for dump
+
+my %results = $config->dump;
+is_deeply(\%results, { '123456.a123' => '987', 'beta.noindent' => 'sillyValue',
+        'nextsection.nonewline' => 'wow2 for me',
+        'version.1.2.3eX.alpha' => 'beta' }, 'dump works in array context');
+
 $expect = {'beta.noindent', 'sillyValue', 'nextsection.nonewline',
     'wow2 for me'};
 
 # test get_regexp
 
-my %results = $config->get_regexp( key => 'in' );
-
-lives_and { is_deeply(\%results, $expect) } '--get-regexp';
+lives_and { is_deeply(scalar $config->get_regexp( key => 'in' ), $expect) }
+    '--get-regexp';
 
 $config->set(key => 'nextsection.nonewline', value => 'wow4 for you',
         filename => $config_filename, multiple => 1);
@@ -364,8 +370,8 @@ $config->load;
 $expect = ['wow2 for me', 'wow4 for you'];
 
 $config->load;
-my @result = $config->get_all(key => 'nextsection.nonewline');
-is_deeply(\@result, $expect, '--add');
+is_deeply(scalar $config->get_all(key => 'nextsection.nonewline'), $expect,
+    '--add');
 
 burp($config_filename,
 '[novalue]
@@ -383,13 +389,13 @@ lives_and { is($config->get( key => 'emptyvalue.variable', filter => qr/^$/ ),
 
 # more get_regexp
 
-%results = $config->get_regexp( key => 'novalue' );
-lives_and { is_deeply(\%results, { 'novalue.variable' => undef } ) }
-    'get_regexp variable with no value';
+lives_and { is_deeply(scalar $config->get_regexp( key => 'novalue' ), {
+            'novalue.variable' => undef } ) }
+        'get_regexp variable with no value';
 
-%results = $config->get_regexp( key => qr/emptyvalue/ );
-lives_and { is_deeply(\%results, { 'emptyvalue.variable' => '' } ) }
-    'get_regexp variable with empty value';
+lives_and { is_deeply(scalar $config->get_regexp( key => qr/emptyvalue/ ), {
+            'emptyvalue.variable' => '' } ) }
+        'get_regexp variable with empty value';
 
 # should evaluate to a true value
 ok($config->get( key => 'novalue.variable', as => 'bool' ),
@@ -798,17 +804,16 @@ burp($config_filename,
 
 $config->load;
 
-%results = $config->get_regexp( key => 'x', as => 'bool' );
-is_deeply(\%results, { 'section.exact' => 0, 'section.inexact' => 1,
-        'section.delicieux' => 1 }, 'get_regexp casting works');
+is_deeply(scalar $config->get_regexp( key => 'x', as => 'bool' ), {
+        'section.exact' => 0, 'section.inexact' => 1, 'section.delicieux' => 1
+    }, 'get_regexp casting works');
 
-%results = $config->get_regexp( key => 'x', filter => '!0' );
-is_deeply(\%results, { 'section.delicieux' => 'true' },
-    'get_regexp filter works');
+is_deeply(scalar $config->get_regexp( key => 'x', filter => '!0' ), {
+        'section.delicieux' => 'true' }, 'get_regexp filter works');
 
-@results = $config->get_all( key => 'section.b', filter => 'f' );
-is_deeply(\@results, [ 'off' ], 'get_all filter works');
+is_deeply(scalar $config->get_all( key => 'section.b', filter => 'f' ),
+    [ 'off' ], 'get_all filter works');
 
-@results = $config->get_all( key => 'section.b', as => 'bool' );
-is_deeply(\@results, [ 0, 1 ], 'get_all casting works');
+is_deeply(scalar $config->get_all( key => 'section.b', as => 'bool' ),
+    [ 0, 1 ], 'get_all casting works');
 

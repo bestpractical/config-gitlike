@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 92;
+use Test::More tests => 93;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -1100,3 +1100,12 @@ is_deeply(
     'get_all casting works'
 );
 
+# we don't strip the quotes on this, right?
+$config->set(
+    key => 'test.foo',
+    value => '"ssh" for "kernel.org"',
+    filename => $config_filename,
+);
+$config->load;
+is( $config->get( key => 'test.foo' ), '"ssh" for "kernel.org"',
+    "don't strip quotes contained in value" );

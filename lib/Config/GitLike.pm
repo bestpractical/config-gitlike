@@ -17,6 +17,8 @@ has 'confname' => (
     isa => 'Str',
 );
 
+# not defaulting to {} allows the predicate is_loaded
+# to determine whether data has been loaded yet or not
 has 'data' => (
     is => 'rw',
     predicate => 'is_loaded',
@@ -29,60 +31,17 @@ has 'multiple' => (
     default => sub { +{} },
 );
 
-
-=head1 NAME
-
-Config::GitLike - (mostly) git-compatible config file parsing
-
-=head1 SYNOPSIS
-
-    use Config::GitLike;
-
-    my $c = Config::GitLike->new(confname => 'config');
-    $c->load;
-
-    $c->get(
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=head2 set_multiple $name
-
-Mark the key string C<$name> as containing multiple values.
-
-Returns nothing.
-
-=cut
-
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = @_, 1;
     $self->multiple->{$name} = $mult;
 }
 
-=head2 is_multiple $name
-
-Return a true value if the key string C<$name> contains multiple values; false
-otherwise.
-
-=cut
-
 sub is_multiple {
     my $self = shift;
     my $name = shift;
     return $self->multiple->{$name};
 }
-
-=head2 load
-
-Load the global, local, and directory configuration file with the filename
-C<confname> into the C<data> attribute (if they exist).
-
-Returns the contents of the C<data> attribute after all configs have been
-loaded.
-
-=cut
 
 sub load {
     my $self = shift;
@@ -91,36 +50,13 @@ sub load {
     $self->load_global;
     $self->load_user;
     $self->load_dirs( $path );
-    return $self->data;
+    return wantarray? %{$self->data} : $self->data;
 }
-
-=head2 dir_file
-
-Return a string representing the path to a configuration file with the
-name C<confname> in the current working directory (or a directory higher
-on the directory tree).
-
-Override this method in a subclass if the directory file has a name
-other than C<confname> or is contained in, for example, a subdirectory
-(such as with C<./.git/config> versus C<~/.gitconfig>).
-
-=cut
 
 sub dir_file {
     my $self = shift;
     return "." . $self->confname;
 }
-
-=head2 load_dirs
-
-Load the configuration file in the current working directory into the C<data>
-attribute or, if there is no config matching C<dir_file> in the current working
-directory, walk up the directory tree until one is found. (No error is thrown
-if none is found.)
-
-Returns nothing of note.
-
-=cut
 
 sub load_dirs {
     my $self = shift;
@@ -128,7 +64,8 @@ sub load_dirs {
     my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
     my @dirs = File::Spec->splitdir( $dirs );
     while (@dirs) {
-        my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs), $self->dir_file );
+        my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs),
+            $self->dir_file );
         if (-f $path) {
             $self->load_file( $path );
             last;
@@ -137,30 +74,10 @@ sub load_dirs {
     }
 }
 
-=head2 global_file
-
-Return a string representing the path to a system-wide configuration file with
-name C<confname> (the L<Config::GitLike> object's C<confname> attribute).
-
-Override this method in a subclass if the global file has a different name
-than C<confname> or is contained in a directory other than C</etc>.
-
-=cut
-
 sub global_file {
     my $self = shift;
     return "/etc/" . $self->confname;
 }
-
-=head2 load_global
-
-If a global configuration file with the name C<confname> exists, load
-its configuration variables into the C<data> attribute.
-
-Returns the current contents of the C<data> attribute after the
-file has been loaded, or undef if no global config file is found.
-
-=cut
 
 sub load_global {
     my $self = shift;
@@ -168,31 +85,10 @@ sub load_global {
     return $self->load_file( $self->global_file );
 }
 
-=head2 user_file
-
-Return a string representing the path to a configuration file
-in the current user's home directory with filename C<confname>.
-
-Override this method in a subclass if the user directory file
-does not have the same name as the global config file.
-
-=cut
-
 sub user_file {
     my $self = shift;
     return File::Spec->catfile( File::HomeDir->my_home, "." . $self->confname );
 }
-
-=head2 load_user
-
-If a configuration file with the name C<confname> exists in the current
-user's home directory, load its config variables into the C<data>
-attribute.
-
-Returns the current contents of the C<data> attribute after the file
-has been loaded, or undef if no global config file is found.
-
-=cut
 
 sub load_user {
     my $self = shift;
@@ -215,14 +111,6 @@ sub _read_config {
     return $c;
 }
 
-=head2 load_file $filename
-
-Takes a string containing the path to a file, opens it if it exists, loads its
-config variables into the C<data> attribute, and returns the current contents
-of the C<data> attribute (a hashref).
-
-=cut
-
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
@@ -239,28 +127,6 @@ sub load_file {
     );
     return $self->data;
 }
-
-=head2 parse_content( content => $str, callback => $sub, error => $sub )
-
-Takes arguments consisting of C<content>, a string of the content of the
-configuration file to be parsed, C<callback>, a submethod to run on information
-retrieved from the config file (headers, subheaders, and key/value pairs), and
-C<error>, a submethod to run on malformed content.
-
-Returns undef on success and C<error($content)> on failure.
-
-C<callback> is called like:
-
-    callback(section => $str, offset => $num, length => $num, name => $str, value => $str)
-
-C<name> and C<value> may be omitted if the callback is not being called on a
-key/value pair, or if it is being called on a key with no value.
-
-C<error> is called like:
-
-    error( content => $content, offset => $offset )
-
-=cut
 
 sub parse_content {
     my $self = shift;
@@ -392,17 +258,6 @@ sub parse_content {
     }
 }
 
-=head2 define( section => 'str, name => 'str', value => 'str' )
-
-Given a section, a key name, and a value¸ store this information
-in memory in the config object. (In the C<data> attribute if you
-must know.)
-
-Returns the value that was just defined on success, or nothing
-if no name is given and thus the key cannot be defined.
-
-=cut
-
 sub define {
     my $self = shift;
     my %args = (
@@ -424,35 +279,6 @@ sub define {
     }
 }
 
-=head2 cast( value => 'foo', as => 'int', human => 1 )
-
-Return C<value> cast into the type specified by C<as>.
-
-Valid values for C<as> are C<bool>, C<int>, C<num>, or C<bool-or-int>. For
-C<bool>, C<true>, C<yes>, C<on>, C<1>, and undef are translated into a true
-value (for Perl); anything else is false. Specifying a true value for the
-C<human> arg will get you a human-readable 'true' or 'false' rather than a
-value that plays along with Perl's definition of truthiness.
-
-For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be
-multiplied by 1024, 1048576, and 1073741824, respectively, before being
-returned.
-
-C<bool-or-int>, as you might have guessed, gives you either
-a bool or an int depending on which one applies.
-
-TODO should numbers be truncated if C<int> is specified?
-
-If C<as> is unspecified, C<value> is returned unchanged.
-
-=cut
-
-use constant {
-    BOOL_TRUE_REGEX => qr/^(?:true|yes|on|-?0*1)$/i,
-    BOOL_FALSE_REGEX => qr/^(?:false|no|off|0*)$/i,
-    NUM_REGEX => qr/^-?[0-9]*\.?[0-9]*[kmg]?$/,
-};
-
 sub cast {
     my $self = shift;
     my %args = (
@@ -461,6 +287,12 @@ sub cast {
         human => undef, # true value / false value
         @_,
     );
+
+    use constant {
+        BOOL_TRUE_REGEX => qr/^(?:true|yes|on|-?0*1)$/i,
+        BOOL_FALSE_REGEX => qr/^(?:false|no|off|0*)$/i,
+        NUM_REGEX => qr/^-?[0-9]*\.?[0-9]*[kmg]?$/,
+    };
 
     if (defined $args{as} && $args{as} eq 'bool-or-int') {
         if ( $args{value} =~ NUM_REGEX ) {
@@ -503,35 +335,10 @@ sub cast {
             $v *= 1024*1024 if $1 eq "m";
             $v *= 1024*1024*1024 if $1 eq "g";
         }
-        return $v + 0;
+
+        return $args{as} eq 'int' ? int $v : $v + 0;
     }
 }
-
-=head2 get( key => 'sect.subsect.key', as => 'int', filter => '!foo' )
-
-Retrieve the config value associated with C<key> cast as an C<as>.
-
-The C<key> option is required (will return undef if unspecified); the C<as>
-option is not (will return a string by default). Sections and subsections
-are specified in the key by separating them from the key name with a .
-character. Sections, subsections, and keys may all be quoted (double or
-single quotes).
-
-If C<key> doesn't exist in the config, undef is returned. Dies with
-the exception "Multiple values" if the given key has more than one
-value associated with it. (Use C<get_all to retrieve multiple values.)
-
-Loads the configuration file with name $confname if it hasn't yet been
-loaded. Note that if you've run any C<set> calls to the loaded
-configuration files since the last time they were loaded, you MUST
-call C<load> again before getting, or the returned configuration data
-may not match the configuration variables on-disk.
-
-C<filter> can be given to pick a single result for a variable with
-multiple values. If the regex string begins with a !, negative
-matching rather than positive matching will be used.
-
-=cut
 
 sub get {
     my $self = shift;
@@ -578,16 +385,6 @@ sub _remove_balanced_quotes {
     return $key;
 }
 
-=head2 get_all( key => 'foo', filter => 'regex', as => 'bool' )
-
-Like C<get>, but does not fail if the number of values for the key is not
-exactly one.
-
-Returns a list of values (or an arrayref in scalar context), narrowed by
-C<filter> and cast as C<as> if these options are specified.
-
-=cut
-
 sub get_all {
     my $self = shift;
     my %args = (
@@ -613,15 +410,6 @@ sub get_all {
     @v = map {$self->cast( value => $_, as => $args{as} )} @v;
     return wantarray ? @v : \@v;
 }
-
-=head2 get_regexp( key => 'regex', filter => 'regex', as => 'bool' )
-
-Similar to C<get_all>, but searches for values based on a key regex.
-
-Returns a hash of name/value pairs (or a hashref in scalar context), with
-values filtered by C<filter> and cast as C<as> if specified.
-
-=cut
 
 sub get_regexp {
     my $self = shift;
@@ -657,20 +445,6 @@ sub get_regexp {
     return wantarray ? %results : \%results;
 }
 
-=head2 dump
-
-In scalar context, return a string containing all configuration data, sorted in
-ASCII order, in the form:
-
-    section.key=value
-    section2.key=value
-
-If called in void context, this string is printed instead.
-
-In list context, return a hash containing all the configuration data.
-
-=cut
-
 sub dump {
     my $self = shift;
 
@@ -694,14 +468,6 @@ sub dump {
     return $data if defined wantarray;
 }
 
-=head2 format_section( section => 'section.subsection', bare => 1 )
-
-Return a string containing the section/subsection header, formatted
-as it should appear in a config file. If C<bare> is true, the returned
-value is not followed be a newline.
-
-=cut
-
 sub format_section {
     my $self = shift;
 
@@ -724,14 +490,6 @@ sub format_section {
     }
 }
 
-=head2 format_definition( key => 'str', value => 'str', bare => 1 )
-
-Return a string containing the key/value pair as they should be printed in the
-config file. If C<bare> is true, the returned value is not tab-indented nor
-followed by a newline.
-
-=cut
-
 sub format_definition {
     my $self = shift;
     my %args = (
@@ -749,27 +507,6 @@ sub format_definition {
     $ret = "\t$ret\n" unless $args{bare};
     return $ret;
 }
-
-=head2 set( key => "section.foo", value => "bar", filename => File::Spec->catfile(qw/home user/, "." . $config->confname, filter => 'regex$', as => 'bool', replace_all => 1 )
-
-Sets the key C<foo> in the configuration section C<section> to the value C<bar>
-in the given filename. It's necessary to specify the filename since the
-C<confname> attribute is not unambiguous enough to determine where to write to.
-(There may be multiple config files in different directories which inherit.)
-
-Replaces values if C<key> already exists.
-
-To unset a key, pass in C<key> but not C<value>.
-
-If C<as> is specified as C<bool>, 'true' or 'false' will be written to the
-config file if the given value is a valid bool. If C<int> or C<num> are
-specified, only valid ints or nums will be written. An exception is
-thrown otherwise.
-
-Returns true on success, false if the filename was unopenable and thus no
-set was performed.
-
-=cut
 
 sub set {
     my $self = shift;
@@ -959,21 +696,6 @@ sub _write_config {
         or die "Can't rename ${filename}.lock to ${filename}: $!\n";
 }
 
-=head2 rename_section( from => 'name.subname', to => 'new.subnew', filename => '/file/to/edit' )
-
-Rename the section existing in C<filename> given by C<from> to the section
-given by C<to>.
-
-Throws an exception C<no such section> if the section in C<from> doesn't exist
-in C<filename>.
-
-If no value is given for C<to>, the section is removed instead of renamed.
-
-Returns true on success, false if C<filename> was un-openable and thus
-the rename did nothing.
-
-=cut
-
 sub rename_section {
     my $self = shift;
 
@@ -1070,18 +792,6 @@ sub rename_section {
     return $self->_write_config($args{filename}, $c);
 }
 
-=head2 remove_section( section => 'section.subsection', filename => '/file/to/edit/ )
-
-Remove the given section and all key/value pairs in that section from the file
-given by C<filename>.
-
-If C<section> does not exist in C<filename>, an exception is thrown.
-
-Returns true on success, false if C<filename> was un-openable and thus
-the rename did nothing.
-
-=cut
-
 sub remove_section {
     my $self = shift;
 
@@ -1101,6 +811,481 @@ sub remove_section {
 1;
 
 __END__
+
+=head1 NAME
+
+Config::GitLike - git-compatible config file parsing
+
+=head1 SYNOPSIS
+
+This module parses git-style config files, which look like this:
+
+    [core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+    [remote "origin"]
+        url = spang.cc:/srv/git/home.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+    [another-section "subsection"]
+        key = test
+        key = multiple values are OK
+        emptyvalue =
+        novalue
+
+Code that uses this config module might look like:
+
+    use Config::GitLike;
+
+    my $c = Config::GitLike->new(confname => 'config');
+    $c->load;
+
+    $c->get( key => 'section.name' );
+    # make the return value a Perl true/false value
+    $c->get( key => 'core.filemode', as => 'bool' );
+
+    # replace the old value
+    $c->set(
+        key => 'section.name',
+        value => 'val1',
+        filename => '/home/user/.config',
+    );
+
+    # make this key have multiple values rather than replacing the
+    # old value
+    $c->set(
+        key => 'section.name',
+        value => 'val2',
+        filename => '/home/user/.config',
+        multiple => 1,
+    );
+
+    # replace all occurrences of the old value for section.name with a new one
+    $c->set(
+        key => 'section.name',
+        value => 'val3',
+        filename => '/home/user/.config',
+        multiple => 1,
+        replace_all => 1,
+    );
+
+    # get only the value of 'section.name' that matches '2'
+    $c->get( key => 'section.name', filter => '2' );
+    $c->get_all( key => 'section.name' );
+    # prefixing a search regexp with a ! negates it
+    $c->get_regexp( key => '!na' );
+
+    $c->rename_section(
+        from => 'section',
+        to => 'new-section',
+        filename => '/home/user/.config'
+    );
+
+    $c->remove_section(
+        section => 'section',
+        filename => '/home/user/.config'
+    );
+
+    # unsets all instances of the given key
+    $c->set( key => 'section.name', filename => '/home/user/.config' );
+
+    my %config_vals = $config->dump;
+    # string representation of config data
+    my $str = $config->dump;
+    # prints rather than returning
+    $config->dump;
+
+=head1 DESCRIPTION
+
+This module handles interaction with configuration files of the style used
+by the version control system Git. It can both parse and modify these
+files, as well as create entirely new ones.
+
+You only need to know a few things about the configuration format in order
+to use this module. First, a configuration file is made up of key/value
+pairs. Every key must be contained in a section. Sections can have
+subsections, but they don't have to. For the purposes of setting and
+getting configuration variables, we join the section name,
+subsection name, and variable name together with dots to get a key
+name that looks like "section.subsection.variable". These are the
+strings that you'll be passing in to C<key> arguments.
+
+Configuration files inherit from each other. By default, C<Config::GitLike>
+loads data from a system-wide configuration file, a per-user
+configuration file, and a per-directory configuration file, but by
+subclassing and overriding methods you can obtain any combination of
+configuration files. By default, configuration files that don't
+exist are just skipped.
+
+See
+L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>
+for details on the syntax of git configuration files. We won't waste pixels
+on the nitty gritty here.
+
+While the behaviour of a couple of this module's methods differ slightly
+from the C<git config> equivalents, this module can read any config file
+written by git, and git can write any config file written by this module.
+
+This is an object-oriented module using L<Any::Moose|Any::Moose>. All
+subroutines are object method calls.
+
+A few methods have arguments that are always used for the same purpose:
+
+=head2 Filenames
+
+All methods that change things in a configuration file require a filename to
+write to, via the C<filename> argument. Since a C<Config::GitLike> object can
+be working with multiple config files that inherit from each other, we don't
+try to figure out which one to write to automatically and let you specify
+instead.
+
+=head2 Casting
+
+All get and set methods can make sure the values they're returning or
+setting are valid values of a certain type: C<bool>, C<int>,
+C<num>, or C<bool-or-int> (or at least as close as Perl can get
+to having these types). Do this by passing one of these types
+in via the C<as> argument. The set method, if told to write
+bools, will always write "true" or "false" (not anything else that
+C<cast> considers a valid bool).
+
+Methods that are told to cast values will throw exceptions if
+the values they're trying to cast aren't valid values of the
+given type.
+
+See the L<cast|/"cast( value =E<gt> 'foo', as => 'int', human =E<gt> 1 )">
+method documentation for more on what is considered valid for
+each type.
+
+=head2 Filtering
+
+All get and set methods can filter what values they return via their
+C<filter> argument, which is expected to be a string that is a valid
+regex. If you want to filter items OUT instead of IN, you can
+prefix your regex with a ! and that'll do the trick.
+
+Now, on the the methods!
+
+=head1 MAIN METHODS
+
+There are the methods you're likely to use the most.
+
+=head2 new( confname => 'config' )
+
+Create a new configuration object with the base config name C<confname>.
+
+C<confname> is used to construct the filenames that will be loaded; by
+default, these are C</etc/confname> (global configuration file),
+C<~/.confname> (user configuration file), and C<<Cwd>/.confname> (directory
+configuration file).
+
+You can override these defaults by subclassing C<Config::GitLike> and
+overriding the methods C<global_file>, C<user_file>, and C<dir_file>. (See
+L<"METHODS YOU MAY WISH TO OVERRIDE"> for details.)
+
+=head2 confname
+
+The configuration filename that you passed in when you created
+the C<Config::GitLike> object. You can change it if you want by
+passing in a new name (and then reloading via L<"load">).
+
+=head2 load
+
+Load the global, local, and directory configuration file with the filename
+C<confname>(if they exist). Configuration variables loaded later
+override those loaded earlier, so variables from the directory
+configuration file have the highest precedence.
+
+Returns a hash of all loaded configuration data stored in the module
+after the files have been loaded, as a reference or a hash depending on
+context.
+
+=head2 get
+
+Params:
+
+    key => 'sect.subsect.key'
+    as => 'int'
+    filter => '!foo
+
+Retrieve the config value associated with C<key> cast as an C<as>.
+
+The C<key> option is required (will return undef if unspecified); the C<as>
+option is not (will return a string by default). Sections and subsections
+are specified in the key by separating them from the key name with a .
+character. Sections, subsections, and keys may all be quoted (double or
+single quotes).
+
+If C<key> doesn't exist in the config, undef is returned. Dies with
+the exception "Multiple values" if the given key has more than one
+value associated with it. (Use L<"get_all"> to retrieve multiple values.)
+
+Calls L<"load"> if it hasn't been done already. Note that if you've run any
+C<set> calls to the loaded configuration files since the last time they were
+loaded, you MUST call L<"load"> again before getting, or the returned
+configuration data may not match the configuration variables on-disk.
+
+=head2 get_all
+
+Params:
+
+    key => 'section.sub'
+    filter => 'regex'
+    as => 'int'
+
+Like L<"get"> but does not fail if the number of values for the key is not
+exactly one.
+
+Returns a list of values (or an arrayref in scalar context).
+
+=head2 get_regexp
+
+Params:
+
+    key => 'regex'
+    filter => 'regex'
+    as => 'bool'
+
+Similar to L<"get_all"> but searches for values based on a key regex.
+
+Returns a hash of name/value pairs (or a hashref in scalar context).
+
+=head2 dump
+
+In scalar context, return a string containing all configuration data, sorted in
+ASCII order, in the form:
+
+    section.key=value
+    section2.key=value
+
+If called in void context, this string is printed instead.
+
+In list context, returns a hash containing all the configuration data.
+
+=head2 set
+
+Params:
+
+    key => 'section.name'
+    value => 'bar'
+    filename => File::Spec->catfile(qw/home user/, '.'.$config->confname)
+    filter => 'regex'
+    as => 'bool'
+    multiple => 1
+    replace_all => 1
+
+Set the key C<foo> in the configuration section C<section> to the value C<bar>
+in the given filename.
+
+Replace C<key>'s value if C<key> already exists.
+
+To unset a key, pass in C<key> but not C<value>.
+
+Returns true on success, undef if the filename was unopenable and thus no
+set was performed.
+
+=head3 multiple values
+
+By default, set will replace the old value rather than giving a key multiple
+values. To override this, pass in C<multiple =E<gt> 1>. If you want to replace
+all instances of a multiple-valued key with a new value, you need to pass
+in C<replace_all =E<gt> 1> as well.
+
+=head2 rename_section
+
+Params:
+
+    from => 'name.subname'
+    to => 'new.subname'
+    filename => '/file/to/edit'
+
+Rename the section existing in C<filename> given by C<from> to the section
+given by C<to>.
+
+Throws an exception C<No such section> if the section in C<from> doesn't exist
+in C<filename>.
+
+If no value is given for C<to>, the section is removed instead of renamed.
+
+Returns true on success, false if C<filename> was un-openable and thus
+the rename did nothing.
+
+=head2 remove_section
+
+Params:
+
+    section => 'section.subsection'
+    filename => '/file/to/edit
+
+Just a convenience wrapper around L<"rename_section"> for readability's sake.
+Removes the given section (which you can do by renaming to nothing as well).
+
+=head1 METHODS YOU MAY WISH TO OVERRIDE
+
+If your configuration layout is different from the default, e.g. if
+your home directory config files are in a directory within the
+home directory (like C<~/.git/config>) instead of just
+dot-prefixed, override these methods to return the right
+directory names. For fancier things like altering precedence,
+you'll need to override L<"load"> as well.
+
+=head2 dir_file
+
+Return a string containing the path to a configuration file with the
+name C<confname> in a directory. The directory isn't specified here.
+
+=head2 global_file
+
+Return a string representing the path to a system-wide configuration file with
+name C<confname>.
+
+=head2 user_file
+
+Return a string containing the path to a configuration file
+in the current user's home directory with filename C<confname>.
+
+=head2 load_dirs
+
+Load the configuration file with the filename L<"dir_file"> in the current
+working directory into the C<data> attribute or, if there is no config
+matching C<dir_file> in the current working directory, walk up the directory
+tree until one is found. (No error is thrown if none is found.)
+
+Returns nothing of note.
+
+=head1 OTHER METHODS
+
+These are mostly used internally, but hey, maybe you'll need them for
+something.
+
+=head2 set_multiple( $name )
+
+Mark the key string C<$name> as containing multiple values.
+
+Returns nothing.
+
+=head2 is_multiple( $name )
+
+Return a true value if the key string C<$name> contains multiple values; false
+otherwise.
+
+=head2 load_global
+
+If a global configuration file with the absolute name given by
+L<"global_file"> exists, load its configuration variables into memory.
+
+Returns the current contents of all the loaded configuration variables
+after the file has been loaded, or undef if no global config file is found.
+
+=head2 load_user
+
+If a configuration file with the absolute name given by
+L<"user_file"> exists, load its config variables into memory.
+
+Returns the current contents of all the loaded configuration variables
+after the file has been loaded, or undef if no user config file is found.
+
+=head2 load_file( $filename )
+
+Takes a string containing the path to a file, opens it if it exists, loads its
+config variables into memory, and returns the currently loaded config
+variables (a hashref).
+
+=head2 parse_content
+
+Parameters:
+
+    content => 'str'
+    callback => sub {}
+    error => sub {}
+
+Takes arguments consisting of C<content>, a string of the content of the
+configuration file to be parsed, C<callback>, a submethod to run on information
+retrieved from the config file (headers, subheaders, and key/value pairs), and
+C<error>, a submethod to run on malformed content. Parses the given content
+and runs callbacks as it finds valid information.
+
+Returns undef on success and C<error($content)> on failure.
+
+C<callback> is called like:
+
+    callback(section => $str, offset => $num, length => $num, name => $str, value => $str)
+
+C<name> and C<value> may be omitted if the callback is not being called on a
+key/value pair, or if it is being called on a key with no value.
+
+C<error> is called like:
+
+    error( content => $content, offset => $offset )
+
+=head2 define
+
+Params:
+
+    section => 'str'
+    name => 'str'
+    value => 'str'
+
+Given a section, a key name, and a value¸ store this information
+in memory in the config object.
+
+Returns the value that was just defined on success, or undef
+if no name is given and thus the key cannot be defined.
+
+=head2 cast
+
+Params:
+
+    value => 'foo'
+    as => 'int'
+    human => 1
+
+Return C<value> cast into the type specified by C<as>.
+
+Valid values for C<as> are C<bool>, C<int>, C<num>, or C<bool-or-num>. For
+C<bool>, C<true>, C<yes>, C<on>, C<1>, and undef are translated into a true
+value (for Perl); anything else is false. Specifying a true value for the
+C<human> arg will get you a human-readable 'true' or 'false' rather than a
+value that plays along with Perl's definition of truthiness (0 or 1).
+
+For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be
+multiplied by 1024, 1048576, and 1073741824, respectively, before being
+returned. C<int>s are truncated after being multiplied, if they have
+a decimal portion.
+
+C<bool-or-int>, as you might have guessed, gives you either
+a bool or an int depending on which one applies.
+
+If C<as> is unspecified, C<value> is returned unchanged.
+
+=head2 format_section
+
+Params:
+
+    section => 'section.subsection'
+    base => 1
+
+Return a string containing the section/subsection header, formatted
+as it should appear in a config file. If C<bare> is true, the returned
+value is not followed be a newline.
+
+=head2 format_definition
+
+Params:
+
+    key => 'str'
+    value => 'str'
+    bare => 1
+
+Return a string containing the key/value pair as they should be printed in the
+config file. If C<bare> is true, the returned value is not tab-indented nor
+followed by a newline.
+
+=head1 SEE ALSO
+
+L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>,
+<Config::GitLike::Cascaded|Config::GitLike::Cascaded>
 
 =head1 LICENSE
 

@@ -15,9 +15,23 @@ Config::GitLike::Cascaded - git-like config file parsing with cascaded inheritan
 
 =head1 SYNOPSIS
 
+B<Stop!> Do not pass go! Go directly to L<Config::GitLike> and read that
+instead. This is a minor variation on that which changes how the configuration
+loading works. Everything else is exactly the same. Just swap in
+C<Config::GitLike::Cascaded> where it reads C<Config::GitLike>.
+
 =head1 DESCRIPTION
 
+The only difference between this module and C<Config::GitLike> as that
+when it's loading the configuration file in the current directory, it
+keeps walking the directory tree even if it finds a config file,
+whereas C<Config::GitLike> will stop after finding the first.
+
+This allows us to have interesting cascading configuration inheritance.
+
 =head1 METHODS
+
+This module overrides this method from C<Config::GitLike>:
 
 =head2 load_dirs
 
@@ -46,6 +60,10 @@ no Moose;
 1;
 
 __END__
+
+=head1 SEE ALSO
+
+<Config::GitLike|Config::GitLike>
 
 =head1 LICENSE
 

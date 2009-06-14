@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 95;
+use Test::More tests => 96;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -403,7 +403,17 @@ throws_ok {
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key';
+qr/invalid key/i, 'invalid key starting with a number';
+
+# ADDITIONAL TEST: keys cannot contain underscore
+throws_ok {
+    $config->set(
+        key      => 'inval.underscore_key',
+        value    => 'blabla',
+        filename => $config_filename
+    );
+}
+qr/invalid key/i, 'invalid key containing underscore';
 
 lives_ok {
     $config->set(

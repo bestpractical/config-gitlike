@@ -722,12 +722,13 @@ sub _unset_variables {
     return ($c, $difference);
 }
 
-# according to the git test suite, keys cannot start with a number
+# keys can only contain alphanumeric characters and -
+# also, they cannot start with a number
 sub _invalid_key {
     my $self = shift;
     my $key = shift;
 
-    return $key =~ /^[0-9]/;
+    return $key =~ /^[0-9]/ || $key !~ /^[0-9a-zA-Z-]+$/;
 }
 
 # write config with locking

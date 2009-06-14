@@ -71,8 +71,9 @@ sub load_dirs {
     my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
     my @dirs = File::Spec->splitdir( $dirs );
     while (@dirs) {
-        my $path = File::Spec->catpath( $vol, File::Spec->catdir(@dirs),
-            $self->dir_file );
+        my $path = File::Spec->catpath(
+            $vol, File::Spec->catdir(@dirs), $self->dir_file
+        );
         if (-f $path) {
             $self->load_file( $path );
             last;
@@ -1051,6 +1052,9 @@ C<confname>(if they exist). Configuration variables loaded later
 override those loaded earlier, so variables from the directory
 configuration file have the highest precedence.
 
+Pass in an optional path, and it will be passed on to L<"load_dirs"> (which
+loads the directory configuration file(s)).
+
 Returns a hash copy of all loaded configuration data stored in the module
 after the files have been loaded, or a hashref to this hash in
 scalar context.
@@ -1204,10 +1208,16 @@ in the current user's home directory with filename C<confname>.
 
 =head2 load_dirs
 
+Parameters:
+
+    '/path/to/look/in/'
+
 Load the configuration file with the filename L<"dir_file"> in the current
 working directory into the memory or, if there is no config matching
 C<dir_file> in the current working directory, walk up the directory tree until
-one is found. (No error is thrown if none is found.)
+one is found. (No error is thrown if none is found.) If an optional path
+is passed in, that directory will be used as the base directory instead
+of the working directory.
 
 Returns nothing of note.
 

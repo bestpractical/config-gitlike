@@ -31,6 +31,12 @@ has 'multiple' => (
     default => sub { +{} },
 );
 
+has 'config_files' => (
+    is => 'rw',
+    isa => 'ArrayRef',
+    default => sub { [] },
+);
+
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = @_, 1;
@@ -47,6 +53,7 @@ sub load {
     my $self = shift;
     my $path = shift || Cwd::cwd;
     $self->data({});
+    $self->config_files([]);
     $self->load_global;
     $self->load_user;
     $self->load_dirs( $path );
@@ -126,6 +133,10 @@ sub load_file {
             die "Error parsing $filename, near:\n@_\n";
         },
     );
+
+    # note this filename as having been loaded
+    push @{$self->config_files}, $filename;
+
     return $self->data;
 }
 
@@ -1043,6 +1054,11 @@ configuration file have the highest precedence.
 Returns a hash copy of all loaded configuration data stored in the module
 after the files have been loaded, or a hashref to this hash in
 scalar context.
+
+=head2 config_filenames
+
+An array reference containing the absolute filenames of all config files
+that are currently loaded.
 
 =head2 get
 

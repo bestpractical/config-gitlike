@@ -486,8 +486,11 @@ sub get_regexp {
         }
     }
 
-    @results{keys %results} = map { $self->cast( value => $results{$_}, as =>
-            $args{as} ) } keys %results;
+    @results{keys %results} =
+        map { $self->cast(
+                value => $results{$_},
+                as => $args{as}
+            ); } keys %results;
     return wantarray ? %results : \%results;
 }
 
@@ -1264,6 +1267,9 @@ one is found. (No error is thrown if none is found.) If an optional path
 is passed in, that directory will be used as the base directory instead
 of the working directory.
 
+You'll want to use L<"load_file"> to load config files from your overridden
+version of this subroutine.
+
 Returns nothing of note.
 
 =head1 OTHER METHODS
@@ -1291,6 +1297,10 @@ after the file has been loaded, or undef if no user config file is found.
 Takes a string containing the path to a file, opens it if it exists, loads its
 config variables into memory, and returns the currently loaded config
 variables (a hashref).
+
+Note that you ought to only call this subroutine with an argument that you
+know exists, otherwise config files that don't exist will be recorded as
+havind been loaded.
 
 =head2 parse_content
 

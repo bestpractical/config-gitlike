@@ -500,7 +500,15 @@ sub dump {
     for my $key (sort keys %{$self->data}) {
         my $str;
         if (defined $self->data->{$key}) {
-            $str = "$key=".$self->data->{$key}."\n";
+            $str = "$key=";
+            if ( $self->is_multiple($key) ) {
+                $str .= '[';
+                $str .= join(', ', @{$self->data->{$key}});
+                $str .= "]\n";
+            }
+            else {
+                $str .= $self->data->{$key}."\n";
+            }
         }
         else {
             $str = "$key\n";

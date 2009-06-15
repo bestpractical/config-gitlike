@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 96;
+use Test::More tests => 101;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -396,24 +396,65 @@ EOF
 
 is( slurp($config_filename), $expect, 'multivar unset' );
 
+# ADDITIONAL TESTS (7): our rules for valid keys are
+# much more permissive than git's
 throws_ok {
     $config->set(
-        key      => 'inval.2key',
+        key      => "inval.key=foo",
         value    => 'blabla',
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key starting with a number';
+qr/invalid key/i, 'invalid key containing = char';
 
-# ADDITIONAL TEST: keys cannot contain underscore
 throws_ok {
     $config->set(
-        key      => 'inval.underscore_key',
+        key      => 'inval.  key',
         value    => 'blabla',
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key containing underscore';
+qr/invalid key/i, 'invalid key starting with whitespace';
+
+throws_ok {
+    $config->set(
+        key      => 'inval.key  ',
+        value    => 'blabla',
+        filename => $config_filename
+    );
+}
+qr/invalid key/i, 'invalid key ending with whitespace';
+
+throws_ok {
+    $config->set(
+        key      => "inval.key\n2",
+        value    => 'blabla',
+        filename => $config_filename
+    );
+}
+qr/invalid key/i, 'invalid key containing newline';
+
+lives_ok {
+    $config->set(
+        key => 'valid."http://example.com/"',
+        value => 'true',
+        filename => $config_filename,
+    );
+}
+'can have . char in key if quoted';
+
+lives_and {
+    $config->load;
+    is( $config->get( key => 'valid."http://example.com/"' ), 'true' );
+}
+'URL key value is correct';
+
+# kill this section just to not have to modify all the following tests
+lives_ok {
+    $config->remove_section( section => 'valid', filename => $config_filename );
+    $config->load;
+}
+'remove URL key section';
 
 lives_ok {
     $config->set(

@@ -46,7 +46,8 @@ sub set_multiple {
 sub is_multiple {
     my $self = shift;
     my $name = shift;
-    return $self->multiple->{$name};
+    return if !defined $name;
+    return exists $self->multiple->{$name};
 }
 
 sub load {
@@ -150,6 +151,7 @@ sub parse_content {
         @_,
     );
     my $c = $args{content};
+    return if !$c;          # nothing to do if content is empty
     my $length = length $c;
 
     my($section, $prev) = (undef, '');
@@ -161,6 +163,7 @@ sub parse_content {
         # drop to end of line on comments
         if ($c =~ s/\A[#;].*?$//im) {
             next;
+        }
         # [sub]section headers of the format [section "subsection"] (with
         # unlimited whitespace between) or [section.subsection] variable
         # definitions may directly follow the section header, on the same line!
@@ -170,7 +173,6 @@ sub parse_content {
         #   contain any character except newline, " and \ must be escaped
         # - rules for subsections with section.subsection alternate syntax:
         #   same rules as for sections
-        }
         elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]//im) {
             $section = lc $1;
             return $args{error}->(
@@ -185,20 +187,24 @@ sub parse_content {
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        }
         # keys followed by a unlimited whitespace and (optionally) a comment
         # (no value)
-        }
-        elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*([#;].*)?$//im) {
+        #
+        # for keys, we allow any characters that won't screw up the parsing
+        # (= and newline), and match non-greedily to allow any trailing
+        # whitespace to be dropped
+        elsif ($c =~ s/\A([^=\n]+?)[\t ]*([#;].*)?$//im) {
             $args{callback}->(
                 section    => $section,
                 name       => $1,
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
+        }
         # key/value pairs (this particular regex matches only the key part and
         # the =, with unlimited whitespace around the =)
-        }
-        elsif ($c =~ s/\A([0-9a-z-]+)[\t ]*=[\t ]*//im) {
+        elsif ($c =~ s/\A([^=\n]+?)[\t ]*=[\t ]*//im) {
             my $name = $1;
             my $value = "";
             # parse the value
@@ -565,21 +571,32 @@ sub set {
 
     die "No key given\n" unless defined $args{key};
 
-    $args{multiple} = $self->is_multiple($args{key})
-        unless defined $args{multiple};
+    my ($section, $key);
+    # allow quoting of the key to, for example, preserve
+    # . characters in the key
+    if ( $args{key} =~ s/\.["'](.*)["']$// ) {
+        $key = $1;
+        $section = $args{key};
+    }
+    else {
+        $args{key} =~ /^(?:(.*)\.)?(.*)$/;
+        ($section, $key) = map { $self->_remove_balanced_quotes($_) }
+            grep { defined $_ } ($1, $2);
+    }
 
-    $args{key} =~ /^(?:(.*)\.)?(.*)$/;
-    my($section, $key) = map { $self->_remove_balanced_quotes($_) }
-        grep { defined $_ } ($1, $2);
+    $args{multiple} = $self->is_multiple($key)
+        unless defined $args{multiple};
 
     die "No section given in key or invalid key $args{key}\n"
         unless defined $section;
 
     die "Invalid key $key\n" if $self->_invalid_key($key);
 
-    $args{value} = $self->cast(value => $args{value}, as => $args{as},
-        human => 1)
-        if defined $args{value} && defined $args{as};
+    $args{value} = $self->cast(
+        value => $args{value},
+        as    => $args{as},
+        human => 1,
+    ) if defined $args{value} && defined $args{as};
 
     unless (-f $args{filename}) {
         die "No occurrence of $args{key} found to unset in $args{filename}\n"
@@ -722,13 +739,26 @@ sub _unset_variables {
     return ($c, $difference);
 }
 
-# keys can only contain alphanumeric characters and -
-# also, they cannot start with a number
+# keys can contain any characters that aren't newlines or
+# = characters, but cannot start or end with whitespace
+#
+# Allowing . characters in key names actually makes it so you
+# can get collisions between identifiers for things that are not
+# actually the same.
+#
+# For example, you could have a collision like this:
+# [section "foo"] bar.com = 1
+# [section] foo.bar.com = 1
+#
+# Both of these would be turned into 'section.foo.bar.com'. But it's
+# unlikely to ever actually come up, since you'd have to have
+# a *need* to have two things like this that are very similar
+# and yet different.
 sub _invalid_key {
     my $self = shift;
     my $key = shift;
 
-    return $key =~ /^[0-9]/ || $key !~ /^[0-9a-zA-Z-]+$/;
+    return $key !~ /^[^=\n]*$/ || $key =~ /(?:^[ \t]+|[ \t+]$)/;
 }
 
 # write config with locking
@@ -982,7 +1012,9 @@ on the nitty gritty here.
 
 While the behaviour of a couple of this module's methods differ slightly
 from the C<git config> equivalents, this module can read any config file
-written by git, and git can write any config file written by this module.
+written by git. The converse is usually true, but only if you don't take
+advantage of this module's increased permissiveness when it comes to key
+names. (See L<DIFFERENCES FROM GIT-CONFIG> for details.)
 
 This is an object-oriented module using L<Any::Moose|Any::Moose>. All
 subroutines are object method calls.
@@ -1147,6 +1179,10 @@ Replace C<key>'s value if C<key> already exists.
 To unset a key, pass in C<key> but not C<value>.
 
 Returns true on success.
+
+If you need to have a . character in your variable name, you can surround the
+name with quotes (single or double): C<key =&gt 'section."foo.bar.com"'>
+Don't do this unless you really have to.
 
 =head3 multiple values
 
@@ -1351,6 +1387,11 @@ followed by a newline.
 =head1 DIFFERENCES FROM GIT-CONFIG
 
 This module does the following things differently from git-config:
+
+We are much more permissive about valid key names: instead of limiting
+key names to alphanumeric characters and -, we allow any characters
+except for = and newlines, including spaces as long as they are
+not leading or trailing, and . as long as the key name is quoted.
 
 When replacing variable values and renaming sections, we merely use
 a substring replacement rather than writing out new lines formatted in the

@@ -54,6 +54,7 @@ sub load {
     my $self = shift;
     my $path = shift || Cwd::cwd;
     $self->data({});
+    $self->multiple({});
     $self->config_files([]);
     $self->load_global;
     $self->load_user;

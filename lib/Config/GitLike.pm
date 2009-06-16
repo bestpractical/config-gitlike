@@ -25,7 +25,15 @@ has 'data' => (
     isa => 'HashRef',
 );
 
+# key => bool
 has 'multiple' => (
+    is => 'rw',
+    isa => 'HashRef',
+    default => sub { +{} },
+);
+
+# filename where the definition of each key was loaded from
+has 'origins' => (
     is => 'rw',
     isa => 'HashRef',
     default => sub { +{} },
@@ -47,7 +55,7 @@ sub is_multiple {
     my $self = shift;
     my $name = shift;
     return if !defined $name;
-    return exists $self->multiple->{$name};
+    return $self->multiple->{$name};
 }
 
 sub load {
@@ -130,7 +138,7 @@ sub load_file {
     $self->parse_content(
         content  => $c,
         callback => sub {
-            $self->define(@_);
+            $self->define(@_, origin => $filename);
         },
         error    => sub {
             die "Error parsing $filename, near:\n@_\n";
@@ -298,21 +306,37 @@ sub define {
         section => undef,
         name    => undef,
         value   => undef,
+        origin  => undef,
         @_,
     );
     return unless defined $args{name};
     $args{name} = lc $args{name};
     my $key = join(".", grep {defined} @args{qw/section name/});
-    if ($self->is_multiple($key)) {
-        push @{$self->data->{$key} ||= []}, $args{value};
+
+    # we're either adding a whole new key or adding a multiple key from
+    # the same file
+    if ( !defined $self->origins->{$key}
+        || $self->origins->{$key} eq $args{origin} ) {
+        if ($self->is_multiple($key)) {
+            push @{$self->data->{$key} ||= []}, $args{value};
+        }
+        elsif (exists $self->data->{$key}) {
+            $self->set_multiple($key);
+            $self->data->{$key} = [$self->data->{$key}, $args{value}];
+        }
+        else {
+            $self->data->{$key} = $args{value};
+        }
     }
-    elsif (exists $self->data->{$key}) {
-        $self->set_multiple($key);
-        $self->data->{$key} = [$self->data->{$key}, $args{value}];
-    }
+    # we're overriding a key set previously from a different file
     else {
+        # un-mark as multiple if it was previously marked as such
+        $self->set_multiple( $key, 0 ) if $self->is_multiple( $key );
+
+        # set the new value
         $self->data->{$key} = $args{value};
     }
+    $self->origins->{$key} = $args{origin};
 }
 
 sub cast {

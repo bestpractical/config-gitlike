@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 101;
+use Test::More tests => 104;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -1177,3 +1177,59 @@ is( $config->get( key => 'test.foo', as => 'int' ), 1,
     'int casting truncates');
 is( $config->get( key => 'test.foo', as => 'num' ), 1.542,
     'num casting doesn\'t truncate');
+
+# Test config file inheritance/overriding.
+
+# Config files are loaded in the order: global, user, dir. Variables contained
+# in files loaded later replace variables of the same name that were
+# loaded earlier.
+
+unlink $config_filename;
+
+my $global_config = File::Spec->catfile( $config_dirname, 'etc', 'config' );
+my $user_config = File::Spec->catfile( $config_dirname, 'home', 'config' );
+my $repo_config = $config_filename;
+
+mkdir File::Spec->catdir( $config_dirname, 'etc' );
+mkdir File::Spec->catdir( $config_dirname, 'home' );
+
+burp(
+    $repo_config,
+    '[section]
+	b = off
+'
+);
+
+burp(
+    $user_config,
+    '[section]
+	b = on
+	a = off
+'
+);
+
+$config->load;
+
+is( $config->get( key => 'section.b' ), 'off',
+    'repo config overrides user config');
+
+is( $config->get( key => 'section.a' ), 'off',
+    'user config is loaded');
+
+burp(
+    $global_config,
+    '[section]
+	b = true
+	a = true
+	c = true
+'
+);
+
+$config->load;
+
+%results = $config->dump;
+is_deeply(
+    \%results,
+    { 'section.a' => 'off', 'section.b' => 'off', 'section.c' => 'true' },
+    'global config is loaded and user/repo configs override it'
+);

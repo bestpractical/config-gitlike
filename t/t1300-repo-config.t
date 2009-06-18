@@ -1233,3 +1233,52 @@ is_deeply(
     { 'section.a' => 'off', 'section.b' => 'off', 'section.c' => 'true' },
     'global config is loaded and user/repo configs override it'
 );
+
+unlink $config_filename;
+
+# Tests for group_set, which git doesn't have.
+
+# Anything beyond the basics should be covered by the fact that
+# set is implemented in terms of group_set. We just want to
+# make sure that passing in multiple things to set works here,
+# since set only passes in one.
+
+$config->group_set(
+    $config_filename,
+    [
+    {
+        key => 'foo.test1',
+        value => '1',
+        as => 'bool',
+    },
+    {
+        key => 'foo.test2',
+        value => 'bar',
+    },
+    ]
+);
+
+$config->load;
+is( $config->get( key => 'foo.test1' ), 'true', 'basic group_set' );
+is( $config->get( key => 'foo.test2' ), 'bar', 'basic group_set' );
+
+unlink $global_config;
+unlink $user_config;
+unlink $repo_config;
+
+# Test to make sure subsection comparison is case-sensitive.
+burp(
+    $config_filename,
+    '[section "FOO"]
+	b = true
+[section "foo"]
+	b = yes
+'
+);
+
+$config->load;
+
+# If comparison were actually case-insensitive, this would blow
+# up on a multival.
+is( $config->get( key => 'section.FOO.b' ), 'true',
+    'subsection comparison is case-sensitive' );

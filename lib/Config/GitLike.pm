@@ -7,7 +7,8 @@ use Cwd;
 use File::HomeDir;
 use Regexp::Common;
 use Any::Moose;
-use Fcntl qw/O_CREAT O_EXCL O_WRONLY/;
+use Scalar::Util qw(openhandle);
+use Fcntl qw(:DEFAULT :flock);
 use 5.008;
 
 
@@ -118,15 +119,27 @@ sub load_user {
 # returns undef if the file was unable to be opened
 sub _read_config {
     my $filename = shift;
+    my $lock_and_return_fh = shift;
 
-    open(my $fh, "<", $filename) or return;
+    my $fh;
+    if ( !open($fh, '<', $filename) && $lock_and_return_fh ) {
+        open($fh, '>', $filename);
+        flock($fh, LOCK_EX);
+        return ('', $fh);
+    }
+
+    # lock the filehandle because we want to write to it later and want to
+    # (try to) ensure that no one else writes to the file in the meantime so
+    # that we don't overwrite their update
+    flock($fh, LOCK_EX) if $lock_and_return_fh;
 
     my $c = do {local $/; <$fh>};
 
-    $c =~ s/\n*$/\n/; # Ensure it ends with a newline
-    close $fh;
+    close $fh unless $lock_and_return_fh;
 
-    return $c;
+    $c =~ s/\n*$/\n/; # Ensure it ends with a newline
+
+    return openhandle $fh ? ($c, $fh) : $c;
 }
 
 sub load_file {
@@ -591,6 +604,194 @@ sub format_definition {
     return $ret;
 }
 
+# Given a key, return its variable name, section, and subsection
+# parts. Doesn't do any lowercase transformation.
+sub _split_key {
+    my $key = shift;
+
+    my ($name, $section, $subsection);
+    # allow quoting of the key to, for example, preserve
+    # . characters in the key
+    if ( $key =~ s/\.["'](.*)["']$// ) {
+        $name = $1;
+        $section = $key;
+    }
+    else {
+        $key =~ /^(?:(.*)\.)?(.*)$/;
+        # If we wanted, we could interpret quoting of the section name to
+        # allow for setting keys with section names including . characters.
+        # But git-config doesn't do that, so we won't bother for now. (Right
+        # now it will read these section names correctly but won't set them.)
+        ($section, $name) = map { _remove_balanced_quotes($_) }
+            grep { defined $_ } ($1, $2);
+    }
+
+    # Make sure the section name we're comparing against has
+    # case-insensitive section names and case-sensitive subsection names.
+    if (defined $section) {
+        $section =~ m/^([^.]+)(?:\.(.*))?$/;
+        ($section, $subsection) = ($1, $2);
+    }
+    else {
+        ($section, $subsection) = (undef) x 2;
+    }
+    return ($section, $subsection, $name);
+}
+
+sub group_set {
+    my $self = shift;
+    my ($filename, $args_ref) = @_;
+
+    my ($c, $fh) = _read_config($filename, 1);  # undef if file doesn't exist
+
+    # loop through each value to set, modifying the content to be written
+    # or erroring out as we go
+    for my $args_hash (@{$args_ref}) {
+        my %args = %{$args_hash};
+
+        my ($section, $subsection, $name) = _split_key($args{key});
+        my $key = join( '.',
+            grep { defined } (lc $section, $subsection, lc $name),
+        );
+
+        $args{multiple} = $self->is_multiple($key)
+            unless defined $args{multiple};
+
+        die "No section given in key or invalid key $args{key}\n"
+            unless defined $section;
+
+        die "Invalid variable name $name\n" if _invalid_name($name);
+
+        $args{value} = $self->cast(
+            value => $args{value},
+            as    => $args{as},
+            human => 1,
+        ) if defined $args{value} && defined $args{as};
+
+        my $new;
+        my @replace;
+
+        # use this for comparison
+        my $cmp_section
+            = defined $subsection ? join('.', lc $section, $subsection)
+                                  : lc $section;
+        # ...but this for writing (don't lowercase)
+        my $combined_section
+            = defined $subsection ? join('.', $section, $subsection)
+                                  : $section;
+
+        # There's not really a good, simple way to get around parsing the
+        # content for each of the values we're setting. If we wanted to
+        # extract the offsets for every single one using only a single parse
+        # run, we'd end up having to munge all the offsets afterwards as we
+        # did the actual replacement since every time we did a replacement it
+        # would change the offsets for anything that was formerly to be added
+        # at a later offset. Which I'm not sure is any better than just
+        # parsing it again.
+        $self->parse_content(
+            content  => $c,
+            callback => sub {
+                my %got = @_;
+                return unless $got{section} eq $cmp_section;
+                $new = $got{offset} + $got{length};
+                return unless defined $got{name};
+
+                my $matched = 0;
+                # variable names are case-insensitive
+                if (lc $name eq $got{name}) {
+                    if (defined $args{filter}) {
+                        # copy the filter arg here since this callback may
+                        # be called multiple times and we don't want to
+                        # modify the original value
+                        my $filter = $args{filter};
+                        if ($filter =~ s/^!//) {
+                            $matched = 1 if ($got{value} !~ m/$filter/i);
+                        }
+                        elsif ($got{value} =~ m/$filter/i) {
+                            $matched = 1;
+                        }
+                    }
+                    else {
+                        $matched = 1;
+                    }
+                }
+
+                push @replace, {offset => $got{offset}, length => $got{length}}
+                    if $matched;
+            },
+            error    => sub {
+                die "Error parsing $filename, near:\n@_\n";
+            },
+        );
+
+        die "Multiple occurrences of non-multiple key?"
+            if @replace > 1 && !$args{multiple};
+
+        if (defined $args{value}) {
+            if (@replace
+                    && (!$args{multiple} || $args{replace_all})) {
+                # Replacing existing value(s)
+
+                # if the string we're replacing with is not the same length as
+                # what's being replaced, any offsets following will be wrong.
+                # save the difference between the lengths here and add it to
+                # any offsets that follow.
+                my $difference = 0;
+
+                # when replacing multiple values, we combine them all into one,
+                # which is kept at the position of the last one
+                my $last = pop @replace;
+
+                # kill all values that are not last
+                ($c, $difference) = _unset_variables(\@replace, $c,
+                    $difference);
+
+                # substitute the last occurrence with the new value
+                substr(
+                    $c,
+                    $last->{offset}-$difference,
+                    $last->{length},
+                    $self->format_definition(
+                        key   => $name,
+                        value => $args{value},
+                        bare  => 1,
+                        ),
+                    );
+            }
+            elsif (defined $new) {
+                # Adding a new value to the end of an existing block
+                substr(
+                    $c,
+                    index($c, "\n", $new)+1,
+                    0,
+                    $self->format_definition(
+                        key   => $name,
+                        value => $args{value}
+                    )
+                );
+            }
+            else {
+                # Adding a new section
+                $c .= $self->format_section( section => $combined_section );
+                $c .= $self->format_definition(
+                    key => $name,
+                    value => $args{value},
+                );
+            }
+        }
+        else {
+            # Removing an existing value (unset / unset-all)
+            die "No occurrence of $args{key} found to unset in $filename\n"
+                unless @replace;
+
+            ($c, undef) = _unset_variables(\@replace, $c, 0);
+        }
+    }
+    return _write_config( $filename, $c );
+    # release lock
+    close $fh;
+}
+
 sub set {
     my $self = shift;
     my (%args) = (
@@ -603,147 +804,10 @@ sub set {
         @_
     );
 
-    die "No key given\n" unless defined $args{key};
+    my $filename = $args{filename};
+    delete $args{filename};
 
-    my ($section, $key);
-    # allow quoting of the key to, for example, preserve
-    # . characters in the key
-    if ( $args{key} =~ s/\.["'](.*)["']$// ) {
-        $key = $1;
-        $section = $args{key};
-    }
-    else {
-        $args{key} =~ /^(?:(.*)\.)?(.*)$/;
-        ($section, $key) = map { $self->_remove_balanced_quotes($_) }
-            grep { defined $_ } ($1, $2);
-    }
-
-    $args{multiple} = $self->is_multiple($key)
-        unless defined $args{multiple};
-
-    die "No section given in key or invalid key $args{key}\n"
-        unless defined $section;
-
-    die "Invalid key $key\n" if $self->_invalid_key($key);
-
-    $args{value} = $self->cast(
-        value => $args{value},
-        as    => $args{as},
-        human => 1,
-    ) if defined $args{value} && defined $args{as};
-
-    unless (-f $args{filename}) {
-        die "No occurrence of $args{key} found to unset in $args{filename}\n"
-            unless defined $args{value};
-        open(my $fh, ">", $args{filename})
-            or die "Can't write to $args{filename}: $!\n";
-        print $fh $self->format_section(section => $section);
-        print $fh $self->format_definition( key => $key, value => $args{value} );
-        close $fh;
-        return;
-    }
-
-    # returns if the file can't be opened, since this just means create a
-    # new file
-    my $c = $self->_read_config($args{filename});
-
-    my $new;
-    my @replace;
-    $self->parse_content(
-        content  => $c,
-        callback => sub {
-            my %got = @_;
-            return unless lc($got{section}) eq lc($section);
-            $new = $got{offset} + $got{length};
-            return unless defined $got{name};
-
-            my $matched = 0;
-            if (lc $key eq lc $got{name}) {
-                if (defined $args{filter}) {
-                    # copy the filter arg here since this callback may
-                    # be called multiple times and we don't want to
-                    # modify the original value
-                    my $filter = $args{filter};
-                    if ($filter =~ s/^!//) {
-                        $matched = 1 if ($got{value} !~ m/$filter/i);
-                    }
-                    elsif ($got{value} =~ m/$filter/i) {
-                        $matched = 1;
-                    }
-                }
-                else {
-                    $matched = 1;
-                }
-            }
-
-            push @replace, {offset => $got{offset}, length => $got{length}}
-                if $matched;
-        },
-        error    => sub {
-            die "Error parsing $args{filename}, near:\n@_\n";
-        },
-    );
-
-    die "Multiple occurrences of non-multiple key?"
-        if @replace > 1 && !$args{multiple};
-
-    if (defined $args{value}) {
-        if (@replace && (!$args{multiple} || $args{replace_all})) {
-            # Replacing existing value(s)
-
-            # if the string we're replacing with is not the same length as
-            # what's being replaced, any offsets following will be wrong. save
-            # the difference between the lengths here and add it to any offsets
-            # that follow.
-            my $difference = 0;
-
-            # when replacing multiple values, we combine them all into one,
-            # which is kept at the position of the last one
-            my $last = pop @replace;
-
-            # kill all values that are not last
-            ($c, $difference) = $self->_unset_variables(\@replace, $c,
-                $difference);
-
-            # substitute the last occurrence with the new value
-            substr(
-                $c,
-                $last->{offset}-$difference,
-                $last->{length},
-                $self->format_definition(
-                    key   => $key,
-                    value => $args{value},
-                    bare  => 1,
-                    ),
-                );
-        }
-        elsif (defined $new) {
-            # Adding a new value to the end of an existing block
-            substr(
-                $c,
-                index($c, "\n", $new)+1,
-                0,
-                $self->format_definition(
-                    key   => $key,
-                    value => $args{value}
-                )
-            );
-        }
-        else {
-            # Adding a new section
-            $c .= $self->format_section( section => $section );
-            $c .= $self->format_definition( key => $key, value => $args{value} );
-        }
-    }
-    else {
-        # Removing an existing value (unset / unset-all)
-        die "No occurrence of $args{key} found to unset in $args{filename}\n"
-            unless @replace;
-
-        ($c, undef) = $self->_unset_variables(\@replace, $c, 0);
-    }
-
-    return $self->_write_config($args{filename}, $c);
+    return $self->group_set( $filename, [ \%args ] );
 }
 
 sub _unset_variables {
@@ -788,23 +852,32 @@ sub _unset_variables {
 # unlikely to ever actually come up, since you'd have to have
 # a *need* to have two things like this that are very similar
 # and yet different.
-sub _invalid_key {
-    my $self = shift;
-    my $key = shift;
+sub _invalid_name {
+    my $name = shift;
 
-    return $key !~ /^[^=\n]*$/ || $key =~ /(?:^[ \t]+|[ \t+]$)/;
+    return $name !~ /^[^=\n]*$/ || $name =~ /(?:^[ \t]+|[ \t+]$)/;
 }
 
 # write config with locking
 sub _write_config {
-    my($self, $filename, $content) = @_;
+    my($filename, $content) = @_;
 
-    # write new config file to disk
+    # allow nested symlinks but only within reason
+    my $max_depth = 5;
+
+    # resolve symlinks
+    while ($max_depth--) {
+        my $readlink = readlink $filename;
+        $filename = $readlink if defined $readlink;
+    }
+
+    # write new config file to temp file
     sysopen(my $fh, "${filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
         or die "Can't open ${filename}.lock for writing: $!\n";
-    syswrite($fh, $content);
-    close($fh);
+    print $fh $content;
+    close $fh;
 
+    # atomic rename
     rename("${filename}.lock", ${filename})
         or die "Can't rename ${filename}.lock to ${filename}: $!\n";
 }
@@ -906,7 +979,9 @@ sub rename_section {
         $difference += (length($replace_with) - $header->{length});
     }
 
-    return $self->_write_config($args{filename}, $c);
+    return _write_config($args{filename}, $c);
+    # release lock
+    close $fh;
 }
 
 sub remove_section {

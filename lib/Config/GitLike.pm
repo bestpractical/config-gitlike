@@ -117,7 +117,6 @@ sub load_user {
 
 # returns undef if the file was unable to be opened
 sub _read_config {
-    my $self = shift;
     my $filename = shift;
 
     open(my $fh, "<", $filename) or return;
@@ -133,7 +132,7 @@ sub _read_config {
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
-    my $c = $self->_read_config($filename);
+    my $c = _read_config($filename);
 
     $self->parse_content(
         content  => $c,
@@ -444,7 +443,6 @@ sub get {
 # all balanced quotes like this is not the right thing to do, but I don't
 # see it actually being a problem in practice.
 sub _remove_balanced_quotes {
-    my $self = shift;
     my $key = shift;
 
     no warnings 'uninitialized';
@@ -749,7 +747,7 @@ sub set {
 }
 
 sub _unset_variables {
-    my ($self, $variables, $c, $difference) = @_;
+    my ($variables, $c, $difference) = @_;
 
     for my $var (@{$variables}) {
         # start from either the last newline or the last section
@@ -823,11 +821,11 @@ sub rename_section {
 
     die "No section to rename from given\n" unless defined $args{from};
 
-    my $c = $self->_read_config($args{filename});
+    my ($c, $fh) = _read_config($args{filename}, 1);
     # file couldn't be opened = nothing to rename
     return if !defined($c);
 
-    ($args{from}, $args{to}) = map { $self->_remove_balanced_quotes($_) }
+    ($args{from}, $args{to}) = map { _remove_balanced_quotes($_) }
                                 grep { defined $_ } ($args{from}, $args{to});
 
     my @replace;

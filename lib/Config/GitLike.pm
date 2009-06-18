@@ -166,7 +166,7 @@ sub load_file {
 sub parse_content {
     my $self = shift;
     my %args = (
-        content  => "",
+        content  => '',
         callback => sub {},
         error    => sub {},
         @_,
@@ -218,7 +218,7 @@ sub parse_content {
         elsif ($c =~ s/\A([^=\n]+?)[\t ]*([#;].*)?$//im) {
             $args{callback}->(
                 section    => $section,
-                name       => $1,
+                name       => lc $1,
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
@@ -226,7 +226,7 @@ sub parse_content {
         # key/value pairs (this particular regex matches only the key part and
         # the =, with unlimited whitespace around the =)
         elsif ($c =~ s/\A([^=\n]+?)[\t ]*=[\t ]*//im) {
-            my $name = $1;
+            my $name = lc $1;
             my $value = "";
             # parse the value
             while (1) {
@@ -431,7 +431,10 @@ sub get {
     );
     $self->load unless $self->is_loaded;
 
-    $args{key} = lc $self->_remove_balanced_quotes($args{key});
+    my ($section, $subsection, $name) = _split_key($args{key});
+    $args{key} = join( '.',
+        grep { defined } (lc $section, $subsection, lc $name),
+    );
 
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -473,7 +476,10 @@ sub get_all {
         @_,
     );
     $self->load unless $self->is_loaded;
-    $args{key} = lc $self->_remove_balanced_quotes($args{key});
+    my ($section, $subsection, $name) = _split_key($args{key});
+    $args{key} = join('.',
+        grep { defined } (lc $section, $subsection, lc $name),
+    );
 
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -837,10 +843,10 @@ sub _unset_variables {
     return ($c, $difference);
 }
 
-# keys can contain any characters that aren't newlines or
+# variables names can contain any characters that aren't newlines or
 # = characters, but cannot start or end with whitespace
 #
-# Allowing . characters in key names actually makes it so you
+# Allowing . characters in variable names actually makes it so you
 # can get collisions between identifiers for things that are not
 # actually the same.
 #

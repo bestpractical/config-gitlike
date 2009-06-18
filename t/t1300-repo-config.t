@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 104;
+use Test::More tests => 106;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -405,7 +405,7 @@ throws_ok {
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key containing = char';
+qr/invalid variable name/i, 'invalid name containing = char';
 
 throws_ok {
     $config->set(
@@ -414,7 +414,7 @@ throws_ok {
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key starting with whitespace';
+qr/invalid variable name/i, 'invalid name starting with whitespace';
 
 throws_ok {
     $config->set(
@@ -423,7 +423,7 @@ throws_ok {
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key ending with whitespace';
+qr/invalid variable name/i, 'invalid name ending with whitespace';
 
 throws_ok {
     $config->set(
@@ -432,7 +432,7 @@ throws_ok {
         filename => $config_filename
     );
 }
-qr/invalid key/i, 'invalid key containing newline';
+qr/invalid key/i, 'invalid name containing newline';
 
 lives_ok {
     $config->set(

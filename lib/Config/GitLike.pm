@@ -46,6 +46,14 @@ has 'config_files' => (
     default => sub { [] },
 );
 
+# default to being more relaxed than git, but allow enforcement
+# of only-write-things-that-git-config-can-read if you want to
+has 'compatible' => (
+    is => 'rw',
+    isa => 'Bool',
+    default => sub { 0 },
+);
+
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = @_, 1;
@@ -175,6 +183,18 @@ sub parse_content {
     return if !$c;          # nothing to do if content is empty
     my $length = length $c;
 
+    my $section_regex
+        = $self->compatible ? qr/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]/im
+                            : qr/\A\[([^\s\[\]"]+)(?:[\t ]*"([^\n]*?)")?\]/im;
+
+    my $key_regex
+        = $self->compatible ? qr/\A([a-z][0-9a-z-]*)[\t ]*([#;].*)?$/im
+                            : qr/\A([^=\n]+?)[\t ]*([#;].*)?$/im;
+
+    my $key_value_regex
+        = $self->compatible ? qr/\A([a-z][0-9a-z-]*)[\t ]*=[\t ]*/im
+                            : qr/\A([^=\n]+?)[\t ]*=[\t ]*/im;
+
     my($section, $prev) = (undef, '');
     while (1) {
         # drop leading white space and blank lines
@@ -194,7 +214,7 @@ sub parse_content {
         #   contain any character except newline, " and \ must be escaped
         # - rules for subsections with section.subsection alternate syntax:
         #   same rules as for sections
-        elsif ($c =~ s/\A\[([0-9a-z.-]+)(?:[\t ]*"([^\n]*?)")?\]//im) {
+        elsif ($c =~ s/$section_regex//) {
             $section = lc $1;
             return $args{error}->(
                 content => $args{content},
@@ -213,9 +233,11 @@ sub parse_content {
         # (no value)
         #
         # for keys, we allow any characters that won't screw up the parsing
-        # (= and newline), and match non-greedily to allow any trailing
-        # whitespace to be dropped
-        elsif ($c =~ s/\A([^=\n]+?)[\t ]*([#;].*)?$//im) {
+        # (= and newline) in non-compatible mode, and match non-greedily to
+        # allow any trailing whitespace to be dropped
+        #
+        # in compatible mode, keys can contain only 0-9a-z-
+        elsif ($c =~ s/$key_regex//) {
             $args{callback}->(
                 section    => $section,
                 name       => lc $1,
@@ -225,7 +247,7 @@ sub parse_content {
         }
         # key/value pairs (this particular regex matches only the key part and
         # the =, with unlimited whitespace around the =)
-        elsif ($c =~ s/\A([^=\n]+?)[\t ]*=[\t ]*//im) {
+        elsif ($c =~ s/$key_value_regex//) {
             my $name = lc $1;
             my $value = "";
             # parse the value
@@ -666,7 +688,14 @@ sub group_set {
         die "No section given in key or invalid key $args{key}\n"
             unless defined $section;
 
-        die "Invalid variable name $name\n" if _invalid_name($name);
+        die "Invalid variable name $name\n"
+            if $self->_invalid_variable_name($name);
+
+        die "Invalid section name $section\n"
+            if $self->_invalid_section_name($section);
+
+        die "Unescaped backslash or \" in subsection $subsection\n"
+            if defined $subsection && $subsection =~ /(?<!\\)(?:"|\\)/;
 
         $args{value} = $self->cast(
             value => $args{value},
@@ -843,8 +872,8 @@ sub _unset_variables {
     return ($c, $difference);
 }
 
-# variables names can contain any characters that aren't newlines or
-# = characters, but cannot start or end with whitespace
+# In non-git-compatible mode, variables names can contain any characters that
+# aren't newlines or = characters, but cannot start or end with whitespace.
 #
 # Allowing . characters in variable names actually makes it so you
 # can get collisions between identifiers for things that are not
@@ -858,10 +887,27 @@ sub _unset_variables {
 # unlikely to ever actually come up, since you'd have to have
 # a *need* to have two things like this that are very similar
 # and yet different.
-sub _invalid_name {
-    my $name = shift;
+sub _invalid_variable_name {
+    my ($self, $name) = @_;
 
-    return $name !~ /^[^=\n]*$/ || $name =~ /(?:^[ \t]+|[ \t+]$)/;
+    if ($self->compatible) {
+        return $name !~ /^[a-z][0-9a-z-]*$/i;
+    }
+    else {
+        return $name !~ /^[^=\n]*$/ || $name =~ /(?:^[ \t]+|[ \t+]$)/;
+    }
+}
+
+# section, NOT subsection!
+sub _invalid_section_name {
+    my ($self, $section) = @_;
+
+    if ($self->compatible) {
+        return $section !~ /^[0-9a-z-.]+$/i;
+    }
+    else {
+        return $section =~ /\s|\[|\]|"/;
+    }
 }
 
 # write config with locking
@@ -1186,6 +1232,11 @@ configuration file).
 You can override these defaults by subclassing C<Config::GitLike> and
 overriding the methods C<global_file>, C<user_file>, and C<dir_file>. (See
 L<"METHODS YOU MAY WISH TO OVERRIDE"> for details.)
+
+If you wish to enforce only being able to read/write config files that
+git can read or write, pass in C<compatible =E<gt> 1> to this
+constructor. The default rules for some components of the config
+file are more permissive than git's (see L<"DIFFERENCES FROM GIT-CONFIG">).
 
 =head2 confname
 
@@ -1525,10 +1576,13 @@ followed by a newline.
 
 This module does the following things differently from git-config:
 
-We are much more permissive about valid key names: instead of limiting
-key names to alphanumeric characters and -, we allow any characters
-except for = and newlines, including spaces as long as they are
-not leading or trailing, and . as long as the key name is quoted.
+We are much more permissive about valid key names and section names.
+For variables, instead of limiting variable names to alphanumeric characters
+and -, we allow any characters except for = and newlines, including spaces as
+long as they are not leading or trailing, and . as long as the key name is
+quoted. For sections, any characters but whitespace, [], and " are allowed.
+You can enforce reading/writing only git-compatible variable names and section
+headers by passing C<compatible =E<gt> 1> to the constructor.
 
 When replacing variable values and renaming sections, we merely use
 a substring replacement rather than writing out new lines formatted in the

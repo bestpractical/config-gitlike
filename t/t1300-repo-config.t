@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 106;
+use Test::More tests => 129;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -1282,3 +1282,218 @@ $config->load;
 # up on a multival.
 is( $config->get( key => 'section.FOO.b' ), 'true',
     'subsection comparison is case-sensitive' );
+
+# Test section names with with weird characters in them (non git-compat)
+
+burp(
+    $config_filename,
+    '[http://www.example.com/test/]
+	admin = foo@bar.com
+[http://www.example.com/test/ "users"]
+	epe = Eddie P. Example
+'
+);
+
+lives_and {
+    $config->load;
+    is( $config->get( key => 'http://www.example.com/test/.admin' ),
+        'foo@bar.com' );
+} 'parse weird characters in section in non-git compat mode';
+
+
+lives_and {
+    $config->set(
+        key => 'http://www.example.com/test/.devs.joe',
+        value => 'Joe Schmoe',
+        filename => $config_filename,
+    );
+    $config->load;
+    is( $config->get( key => 'http://www.example.com/test/.devs.joe' ),
+        'Joe Schmoe',
+    );
+} 'set weird characters in section in non-git compat mode';
+
+# Test git compat flag.
+
+$config->compatible(1);
+
+# variables names that start with numbers or contain characters other
+# than a-zA-Z- are illegal
+
+burp(
+    $config_filename,
+    '[section "FOO"]
+	foo..bar = true
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'variable names cannot contain . in git-compat mode';
+
+burp(
+    $config_filename,
+    '[section "FOO"]
+	foo%@$#bar = true
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'variable names cannot contain symbols in git-compat mode';
+
+burp(
+    $config_filename,
+    '[section "FOO"]
+	01inval = true
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'variable names cannot start with a number git-compat mode';
+
+burp(
+    $config_filename,
+    '[section "FOO"]
+	-inval = true
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'variable names cannot start with a dash git-compat mode';
+
+# set has a different check than the parsing code, so test it too
+throws_ok {
+    $config->set(
+        key => 'section.01inval',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid variable name/im, 'variable names cannot start with a number in git-compat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section.foo%$@bar',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid variable name/im, 'variable names cannot contain symbols in git-compat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section."foo..bar"',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid variable name/im, 'variable names cannot contain . in git-compat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section.-inval',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid variable name/im, 'variable names cannot start with - in git-compat mode';
+
+# section names cannot contain characters other than a-zA-Z-. in compat mode
+
+burp(
+    $config_filename,
+    '[se$^%#& "FOO"]
+	a = b
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'section names cannot contain symbols in git-compat mode';
+
+burp(
+    $config_filename,
+    '[sec tion "FOO"]
+	a = b
+'
+);
+
+throws_ok { $config->load; } qr/error parsing/im,
+    'section names cannot contain whitespace in git-compat mode';
+
+burp(
+    $config_filename,
+    '[-foo.bar-baz "FOO"]
+	a = b
+'
+);
+
+lives_ok { $config->load; }
+    'section names can contain - and . in git-compat mode';
+
+# set has a different check than the parsing code, so test it too
+throws_ok {
+    $config->set(
+        key => 'sec tion.foo.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid section name/im,
+'section names cannot contain whitespace in git-compat mode';
+
+throws_ok {
+    $config->set(
+        key => 's^*&^#$.foo.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid section name/im, 'section names cannot contain symbols in git-compat mode';
+
+lives_and {
+    $config->set(
+        key => '-foo.bar-baz.foo.baz',
+        value => 'none',
+        filename => $config_filename,
+    );
+    $config->load;
+    is( $config->get( key => '-foo.bar-baz.foo.baz' ), 'none' );
+} 'section names can contain - and . while setting in git-compat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section.foo\bar.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/unescaped backslash or \" in subsection/im,
+'subsection names cannot contain unescaped backslash in compat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section.foo"bar.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/unescaped backslash or \" in subsection/im,
+'subsection names cannot contain unescaped " in compat mode';
+
+throws_ok {
+    $config->set(
+        key => "section.foo\nbar.baz",
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid key/im,
+'subsection names cannot contain unescaped newlines in compat mode';
+
+# these should be the case in no-compat mode too
+$config->compatible(0);
+throws_ok {
+    $config->set(
+        key => 'section.foo\bar.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/unescaped backslash or \" in subsection/im,
+'subsection names cannot contain unescaped backslash in nocompat mode';
+
+throws_ok {
+    $config->set(
+        key => "section.foo\nbar.baz",
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/invalid key/im,
+'subsection names cannot contain unescaped newlines in nocompat mode';
+
+throws_ok {
+    $config->set(
+        key => 'section.foo"bar.baz',
+        value => 'none',
+        filename => $config_filename,
+    ) } qr/unescaped backslash or \" in subsection/im,
+'subsection names cannot contain unescaped " in nocompat mode';
+

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 129;
+use Test::More tests => 133;
 use Test::Exception;
 use File::Spec;
 use File::Temp;
@@ -1496,4 +1496,34 @@ throws_ok {
         filename => $config_filename,
     ) } qr/unescaped backslash or \" in subsection/im,
 'subsection names cannot contain unescaped " in nocompat mode';
+
+# Make sure some bad configs throw errors.
+burp(
+    $config_filename,
+    '[testing "FOO"
+	a = b
+'
+);
+
+throws_ok { $config->load } qr/error parsing/i, 'invalid section (nocompat)';
+$config->compatible(1);
+throws_ok { $config->load } qr/error parsing/i, 'invalid section (compat)';
+
+# This should be OK since the variable name doesn't start with [
+burp(
+    $config_filename,
+    '[test]
+	a[] = b
+'
+);
+
+throws_ok { $config->load } qr/error parsing/i,
+    'key cannot contain [] in compat mode';
+
+$config->compatible(0);
+
+lives_and {
+    $config->load;
+    is( $config->get( key => 'test.a[]' ), 'b' );
+} 'key can contain but not start with [ in nocompat mode';
 

@@ -213,12 +213,12 @@ sub parse_content {
                             : qr/\A\[([^\s\[\]"]+)(?:[\t ]*"([^\n]*?)")?\]/im;
 
     my $key_regex
-        = $self->compatible ? qr/\A([a-z][0-9a-z-]*)[\t ]*([#;].*)?$/im
-                            : qr/\A([^=\n]+?)[\t ]*([#;].*)?$/im;
+        = $self->compatible ? qr/\A([a-z][0-9a-z-]*)[\t ]*(?:[#;].*)?$/im
+                            : qr/\A([^\[=\n][^=\n]*?)[\t ]*(?:[#;].*)?$/im;
 
     my $key_value_regex
         = $self->compatible ? qr/\A([a-z][0-9a-z-]*)[\t ]*=[\t ]*/im
-                            : qr/\A([^=\n]+?)[\t ]*=[\t ]*/im;
+                            : qr/\A([^\[=\n][^=\n]*?)[\t ]*=[\t ]*/im;
 
     my($section, $prev) = (undef, '');
     while (1) {
@@ -919,7 +919,7 @@ sub _invalid_variable_name {
         return $name !~ /^[a-z][0-9a-z-]*$/i;
     }
     else {
-        return $name !~ /^[^=\n]*$/ || $name =~ /(?:^[ \t]+|[ \t+]$)/;
+        return $name !~ /^[^=\n\[][^=\n]*$/ || $name =~ /(?:^[ \t]+|[ \t+]$)/;
     }
 }
 

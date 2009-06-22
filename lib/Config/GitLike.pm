@@ -161,7 +161,7 @@ sub load_file {
             $self->define(@_, origin => $filename);
         },
         error    => sub {
-            die "Error parsing $filename, near:\n@_\n";
+            error_callback( @_, filename => $filename );
         },
     );
 
@@ -169,6 +169,31 @@ sub load_file {
     push @{$self->config_files}, $filename;
 
     return $self->data;
+}
+
+sub error_callback {
+    my %args = @_;
+
+    my $offset_of_prev_newline = rindex( $args{content}, "\n", $args{offset} );
+    my $offset_of_next_newline = index( $args{content}, "\n", $args{offset} );
+    my $line = substr(
+        $args{content},
+        $offset_of_prev_newline + 1,
+        $offset_of_next_newline - ($offset_of_prev_newline + 1),
+    );
+
+    my $line_number = 1;
+    my $current_offset = 0;
+
+    while ($current_offset <= $args{offset}) {
+        # nibble off a line of content
+        $args{content} =~ s/(.*\n)//;
+        $line_number++;
+        $current_offset += length $1;
+    }
+    my $position = (length $line) - ($current_offset - ($args{offset} + 1));
+    die "Error parsing $args{filename} at line $line_number, position $position."
+        ."\nBad line was: '$line'\n";
 }
 
 sub parse_content {
@@ -755,7 +780,7 @@ sub group_set {
                     if $matched;
             },
             error    => sub {
-                die "Error parsing $filename, near:\n@_\n";
+                error_callback(@_, filename => $args{filename})
             },
         );
 
@@ -1002,7 +1027,7 @@ sub rename_section {
             }
         },
         error    => sub {
-            die "Error parsing $args{filename}, near:\n@_\n";
+            error_callback( @_, filename => $args{filename} );
         },
     );
     die "No such section '$args{from}'\n"
@@ -1497,6 +1522,29 @@ C<error> is called like:
     error( content => $content, offset => $offset )
 
 Where C<offset> is the point in the content where the parse error occurred.
+
+If you need to use this method, you might be interested in L<"error_callback">
+as well.
+
+=head2 error_callback
+
+Parameters:
+
+    content => 'str'
+    offset => 45
+    filename => '/foo/bar/.baz'
+
+Made especially for passing to L<"parse_content">, passed through the
+C<error> parameter like this:
+
+    error => sub {
+        error_callback( @_, filename => '/file/you/were/parsing' )
+    }
+
+It's used internally wherever L<"parse_content"> is used and will throw
+an exception with a useful message detailing the line number, position on
+the line, and contents of the bad line; if you find the need to use
+L<"parse_content"> elsewhere, you may find it useful as well.
 
 =head2 set_multiple( $name )
 

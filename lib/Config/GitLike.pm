@@ -1421,7 +1421,7 @@ the rename did nothing.
 Parameters:
 
     section => 'section.subsection'
-    filename => '/file/to/edit
+    filename => '/file/to/edit'
 
 Just a convenience wrapper around L<"rename_section"> for readability's sake.
 Removes the given section (which you can do by renaming to nothing as well).

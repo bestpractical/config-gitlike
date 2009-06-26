@@ -131,7 +131,8 @@ sub _read_config {
 
     my $fh;
     if ( !open($fh, '<', $filename) && $lock_and_return_fh ) {
-        open($fh, '>', $filename);
+        open($fh, '>', $filename)
+            or die "Can't open $filename for writing: $!\n";
         flock($fh, LOCK_EX);
         return ('', $fh);
     }

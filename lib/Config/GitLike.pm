@@ -1661,7 +1661,8 @@ configuration files or code snippets.
 =head1 SEE ALSO
 
 L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>,
-L<Config::GitLike::Cascaded|Config::GitLike::Cascaded>
+L<Config::GitLike::Cascaded|Config::GitLike::Cascaded>, L<http://syncwith.us/>
+(C<Config::GitLike> is used in Prophet/SD and provides a working example)
 
 =head1 LICENSE
 

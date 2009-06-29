@@ -11,6 +11,8 @@ use Scalar::Util qw(openhandle);
 use Fcntl qw(:DEFAULT :flock);
 use 5.008;
 
+our $VERSION = '1.00';
+
 
 has 'confname' => (
     is => 'rw',

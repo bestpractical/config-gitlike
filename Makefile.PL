@@ -1,6 +1,6 @@
 use inc::Module::Install;
 license('perl');
-version('1.0');
+version_from('lib/Config/GitLike.pm');
 all_from('lib/Config/GitLike.pm');
 
 

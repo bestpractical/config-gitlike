@@ -128,6 +128,7 @@ sub load_user {
 
 # returns undef if the file was unable to be opened
 sub _read_config {
+    my $self = shift;
     my $filename = shift;
 
     open(my $fh, '<', $filename) or return;
@@ -142,7 +143,7 @@ sub _read_config {
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
-    my $c = _read_config($filename);
+    my $c = $self->_read_config($filename);
 
     $self->parse_content(
         content  => $c,
@@ -684,7 +685,7 @@ sub group_set {
     my $self = shift;
     my ($filename, $args_ref) = @_;
 
-    my $c = _read_config($filename);  # undef if file doesn't exist
+    my $c = $self->_read_config($filename);  # undef if file doesn't exist
 
     # loop through each value to set, modifying the content to be written
     # or erroring out as we go
@@ -836,7 +837,7 @@ sub group_set {
             ($c, undef) = _unset_variables(\@replace, $c, 0);
         }
     }
-    return _write_config( $filename, $c );
+    return $self->_write_config( $filename, $c );
 }
 
 sub set {
@@ -924,6 +925,7 @@ sub _invalid_section_name {
 
 # write config with locking
 sub _write_config {
+    my $self = shift;
     my($filename, $content) = @_;
 
     # allow nested symlinks but only within reason
@@ -960,7 +962,7 @@ sub rename_section {
 
     die "No section to rename from given\n" unless defined $args{from};
 
-    my $c = _read_config($args{filename});
+    my $c = $self->_read_config($args{filename});
     # file couldn't be opened = nothing to rename
     return if !defined($c);
 
@@ -1045,7 +1047,7 @@ sub rename_section {
         $difference += (length($replace_with) - $header->{length});
     }
 
-    return _write_config($args{filename}, $c);
+    return $self->_write_config($args{filename}, $c);
 }
 
 sub remove_section {

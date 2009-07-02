@@ -8,7 +8,7 @@ use File::HomeDir;
 use Regexp::Common;
 use Any::Moose;
 use Scalar::Util qw(openhandle);
-use Fcntl qw(:DEFAULT :flock);
+use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use 5.008;
 
 our $VERSION = '1.00';
@@ -129,28 +129,14 @@ sub load_user {
 # returns undef if the file was unable to be opened
 sub _read_config {
     my $filename = shift;
-    my $lock_and_return_fh = shift;
 
-    my $fh;
-    if ( !open($fh, '<', $filename) && $lock_and_return_fh ) {
-        open($fh, '>', $filename)
-            or die "Can't open $filename for writing: $!\n";
-        flock($fh, LOCK_EX);
-        return ('', $fh);
-    }
-
-    # lock the filehandle because we want to write to it later and want to
-    # (try to) ensure that no one else writes to the file in the meantime so
-    # that we don't overwrite their update
-    flock($fh, LOCK_EX) if $lock_and_return_fh;
+    open(my $fh, '<', $filename) or return;
 
     my $c = do {local $/; <$fh>};
 
-    close $fh unless $lock_and_return_fh;
-
     $c =~ s/\n*$/\n/; # Ensure it ends with a newline
 
-    return openhandle $fh ? ($c, $fh) : $c;
+    return $c;
 }
 
 sub load_file {
@@ -698,7 +684,7 @@ sub group_set {
     my $self = shift;
     my ($filename, $args_ref) = @_;
 
-    my ($c, $fh) = _read_config($filename, 1);  # undef if file doesn't exist
+    my $c = _read_config($filename);  # undef if file doesn't exist
 
     # loop through each value to set, modifying the content to be written
     # or erroring out as we go
@@ -851,8 +837,6 @@ sub group_set {
         }
     }
     return _write_config( $filename, $c );
-    # release lock
-    close $fh;
 }
 
 sub set {
@@ -952,6 +936,8 @@ sub _write_config {
     }
 
     # write new config file to temp file
+    # (the only reason we call it .lock is because that's the
+    # way git does it)
     sysopen(my $fh, "${filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
         or die "Can't open ${filename}.lock for writing: $!\n";
     print $fh $content;
@@ -974,7 +960,7 @@ sub rename_section {
 
     die "No section to rename from given\n" unless defined $args{from};
 
-    my ($c, $fh) = _read_config($args{filename}, 1);
+    my $c = _read_config($args{filename});
     # file couldn't be opened = nothing to rename
     return if !defined($c);
 
@@ -1060,8 +1046,6 @@ sub rename_section {
     }
 
     return _write_config($args{filename}, $c);
-    # release lock
-    close $fh;
 }
 
 sub remove_section {

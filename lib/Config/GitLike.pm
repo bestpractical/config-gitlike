@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use File::Spec;
 use Cwd;
-use File::HomeDir;
 use Regexp::Common;
 use Any::Moose;
 use Scalar::Util qw(openhandle);
@@ -117,7 +116,7 @@ sub load_global {
 sub user_file {
     my $self = shift;
     return
-        File::Spec->catfile( File::HomeDir->my_home, "." . $self->confname );
+        File::Spec->catfile( $ENV{'HOME'}, "." . $self->confname );
 }
 
 sub load_user {

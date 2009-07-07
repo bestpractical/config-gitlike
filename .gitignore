@@ -3,3 +3,4 @@ Makefile
 Makefile.old
 *.tmp
 inc/.author
+blib

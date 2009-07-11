@@ -1,8 +1,4 @@
 package Config::GitLike::Git;
-
-use strict;
-use warnings;
-
 use Any::Moose;
 
 extends 'Config::GitLike';
@@ -28,7 +24,7 @@ sub global_file {
 }
 
 __PACKAGE__->meta->make_immutable;
-no Moose;
+no Any::Moose;
 
 1;
 

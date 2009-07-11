@@ -1,11 +1,9 @@
 package Config::GitLike;
+use Any::Moose;
 
-use strict;
-use warnings;
 use File::Spec;
 use Cwd;
 use Regexp::Common;
-use Any::Moose;
 use Scalar::Util qw(openhandle);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use 5.008;

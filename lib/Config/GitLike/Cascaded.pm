@@ -1,8 +1,4 @@
 package Config::GitLike::Cascaded;
-
-use strict;
-use warnings;
-
 use Any::Moose;
 use Cwd;
 use File::Spec;
@@ -21,7 +17,7 @@ sub load_dirs {
 }
 
 __PACKAGE__->meta->make_immutable;
-no Moose;
+no Any::Moose;
 
 1;
 

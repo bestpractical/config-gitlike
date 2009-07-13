@@ -7,6 +7,10 @@ has 'confname' => (
     default => 'git',
 );
 
+has 'compatible' => (
+    default => 1,
+);
+
 sub dir_file {
     my $self = shift;
     return ".git/config";
@@ -34,10 +38,18 @@ __END__
 
 Config::GitLike::Git - load Git configuration files
 
+=head1 SYNOPSIS
+
+    use Config::GitLike::Git;
+    my $config = Config::GitLike::Git->new;
+
 =head1 DESCRIPTION
 
-This is a modification of L<Config::GitLike> to look at the same
-locations that Git writes to.
+This is a modification of L<Config::GitLike|Config::GitLike> to look at the
+same locations that Git writes to. Unlike with
+L<Config::GitLike|Config::GitLike>, you do not need to pass a confname to its
+constructor. This module also enables the L<Config::GitLike|Config::GitLike>
+option to maintain git compatibility when reading and writing variables.
 
 =head1 METHODS
 

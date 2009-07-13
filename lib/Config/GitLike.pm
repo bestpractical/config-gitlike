@@ -50,7 +50,7 @@ has 'config_files' => (
 has 'compatible' => (
     is => 'rw',
     isa => 'Bool',
-    default => sub { 0 },
+    default => 0,
 );
 
 sub set_multiple {

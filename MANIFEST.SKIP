@@ -9,3 +9,5 @@ pm_to_blib
 .git/
 .gitignore$
 .shipit$
+inc/.author
+xt

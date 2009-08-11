@@ -1,8 +1,7 @@
 use inc::Module::Install;
-license('perl');
-version_from('lib/Config/GitLike.pm');
+name('Config-GitLike');
 all_from('lib/Config/GitLike.pm');
-
+repository('http://github.com/bestpractical/config-gitlike');
 
 requires 'Any::Moose';
 build_requires 'Test::More';

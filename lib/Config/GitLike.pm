@@ -1650,8 +1650,8 @@ L<Config::GitLike::Cascaded|Config::GitLike::Cascaded>, L<http://syncwith.us/>
 
 =head1 LICENSE
 
-You may modify and/or redistribute this software under the same terms
-as Perl 5.8.8.
+This program is free software; you may modify and/or redistribute it
+under the same terms as Perl itself.
 
 =head1 COPYRIGHT
 

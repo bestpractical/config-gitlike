@@ -5,7 +5,7 @@ use File::Copy;
 use Test::More tests => 133;
 use Test::Exception;
 use File::Spec;
-use File::Temp;
+use File::Temp qw/tempdir/;
 use lib 't/lib';
 use TestConfig;
 
@@ -32,8 +32,7 @@ sub burp {
 }
 
 # create an empty test directory in /tmp
-my $config_dir = File::Temp->newdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} );
-my $config_dirname = $config_dir->dirname;
+my $config_dirname = tempdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} );
 my $config_filename = File::Spec->catfile( $config_dirname, 'config' );
 
 diag "config file is: $config_filename" if $ENV{TEST_VERBOSE};
@@ -177,7 +176,7 @@ haha = hello
 '
 );
 
-my $config2_filename = File::Spec->catfile( $config_dir, '.config2' );
+my $config2_filename = File::Spec->catfile( $config_dirname, '.config2' );
 
 copy( $config_filename, $config2_filename )
     or die "File cannot be copied: $!";
@@ -1067,8 +1066,8 @@ $config->load;
 is( $config->dump, $expect, 'value continued on next line' );
 
 # testing symlinked configuration
-symlink File::Spec->catfile( $config_dir, 'notyet' ),
-    File::Spec->catfile( $config_dir, 'myconfig' );
+symlink File::Spec->catfile( $config_dirname, 'notyet' ),
+    File::Spec->catfile( $config_dirname, 'myconfig' );
 
 my $myconfig = TestConfig->new(
     confname => 'myconfig',
@@ -1077,7 +1076,7 @@ my $myconfig = TestConfig->new(
 $myconfig->set(
     key      => 'test.frotz',
     value    => 'nitfol',
-    filename => File::Spec->catfile( $config_dir, 'myconfig' )
+    filename => File::Spec->catfile( $config_dirname, 'myconfig' )
 );
 my $notyet = TestConfig->new(
     confname => 'notyet',
@@ -1086,7 +1085,7 @@ my $notyet = TestConfig->new(
 $notyet->set(
     key      => 'test.xyzzy',
     value    => 'rezrov',
-    filename => File::Spec->catfile( $config_dir, 'notyet' )
+    filename => File::Spec->catfile( $config_dirname, 'notyet' )
 );
 $notyet->load;
 is( $notyet->get( key => 'test.frotz' ),

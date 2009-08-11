@@ -9,7 +9,7 @@ requires 'Regexp::Common';
 build_requires 'Test::More';
 build_requires 'Test::Exception';
 build_requires 'File::Spec';
-build_requires 'File::Temp' => '0.19';
+build_requires 'File::Temp';
 extra_tests();
 sign();
 WriteAll();

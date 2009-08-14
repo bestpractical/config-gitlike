@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 134;
+use Test::More tests => 140;
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -1538,3 +1538,28 @@ lives_and {
 }
 "subsection with escaped backslashes";
 
+# special values in subsection
+
+my %special_in_value =
+  ( backslash => "\\", doublequote => q{"} );
+
+while ( my ( $k, $v ) = each %special_in_value ) {
+    for my $times ( 1 .. 3 ) {
+        my $value = 'chan' . $v x $times . "mon" . $v x $times;
+        lives_and {
+            $config->set(
+                key      => "section.foo",
+                value    => $value,
+                filename => $config_filename,
+            );
+            $config->load;
+            is( $config->get( key => "section.foo" ), $value );
+        }
+        "value with $k occurs $times time"
+          . (
+            $times == 1
+            ? ''
+            : 's'
+          );
+    }
+}

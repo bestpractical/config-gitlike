@@ -227,13 +227,22 @@ sub parse_content {
         #   same rules as for sections
         elsif ($c =~ s/$section_regex//) {
             $section = lc $1;
-            return $args{error}->(
-                content => $args{content},
-                offset =>  $offset,
-                # don't allow quoted subsections to contain unquoted
-                # double-quotes or backslashes
-            ) if $2 && $2 =~ /(?<!\\)(?:"|\\)/;
-            $section .= ".$2" if defined $2;
+            if ($2) {
+                my $subsection = $2;
+                my $check      = $2;
+                $check =~ s!\\\\!!g;
+                $check =~ s!\\"!!g;
+                return $args{error}->(
+                    content => $args{content},
+                    offset  => $offset,
+
+                    # don't allow quoted subsections to contain unquoted
+                    # double-quotes or backslashes
+                ) if $check =~ /\\|"/;
+
+                $section .= ".$subsection";
+            }
+        
             $args{callback}->(
                 section    => $section,
                 offset     => $offset,
@@ -613,7 +622,6 @@ sub format_section {
 
     if ($args{section} =~ /^(.*?)\.(.*)$/) {
         my ($section, $subsection) = ($1, $2);
-        $subsection =~ s/(["\\])/\\$1/g;
         my $ret = qq|[$section "$subsection"]|;
         $ret .= "\n" unless $args{bare};
         return $ret;
@@ -705,9 +713,14 @@ sub group_set {
         die "Invalid section name $section\n"
             if $self->_invalid_section_name($section);
 
-        die "Unescaped backslash or \" in subsection $subsection\n"
-            if defined $subsection && $subsection =~ /(?<!\\)(?:"|\\)/;
-
+        if ( defined $subsection ) {
+            my $check = $subsection;
+            $check =~ s!\\\\!!g;
+            $check =~ s!\\"!!g;
+            die "Unescaped backslash or \" in subsection $subsection\n"
+              if $check =~ /\\|"/;
+        }
+        
         $args{value} = $self->cast(
             value => $args{value},
             as    => $args{as},

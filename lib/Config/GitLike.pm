@@ -230,19 +230,19 @@ sub parse_content {
             if ($2) {
                 my $subsection = $2;
                 my $check      = $2;
-                $check =~ s!\\\\!!g;
-                $check =~ s!\\"!!g;
+                $check =~ s{\\\\}{}g;
+                $check =~ s{\\"}{}g;
                 return $args{error}->(
                     content => $args{content},
                     offset  => $offset,
 
-                    # don't allow quoted subsections to contain unquoted
+                    # don't allow quoted subsections to contain unescaped
                     # double-quotes or backslashes
                 ) if $check =~ /\\|"/;
 
                 $section .= ".$subsection";
             }
-        
+
             $args{callback}->(
                 section    => $section,
                 offset     => $offset,
@@ -724,7 +724,7 @@ sub group_set {
             die "Unescaped backslash or \" in subsection $subsection\n"
               if $check =~ /\\|"/;
         }
-        
+
         $args{value} = $self->cast(
             value => $args{value},
             as    => $args{as},

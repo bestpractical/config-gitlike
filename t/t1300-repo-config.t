@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 133;
+use Test::More tests => 134;
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -1525,4 +1525,16 @@ lives_and {
     $config->load;
     is( $config->get( key => 'test.a[]' ), 'b' );
 } 'key can contain but not start with [ in nocompat mode';
+
+
+lives_and {
+    $config->set(
+        key      => "section.foo\\\\bar.baz",
+        value    => 'none',
+        filename => $config_filename,
+    );
+    $config->load;
+    is( $config->get( key => "section.foo\\\\bar.baz" ), 'none' );
+}
+"subsection with escaped backslashes";
 

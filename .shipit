@@ -8,3 +8,5 @@ git.tagpattern = %v
 # svn.tagpattern = http://code.example.com/svn/tags/MyProj-%v
 
 # CheckChangeLog.files = ChangeLog, MyProj.CHANGES
+
+MakeDist.destination = ~/src/shipit-dist

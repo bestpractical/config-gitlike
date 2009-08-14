@@ -284,6 +284,10 @@ sub parse_content {
                 elsif ($c =~ s/\A\\\r?\n//im) {
                     next;
                 }
+                # escaped backslash characters is translated to actual \
+                elsif ($c =~ s/\A\\\\//im) {
+                    $value .= '\\';
+                }
                 # escaped quote characters are part of the value
                 elsif ($c =~ s/\A\\(['"])//im) {
                     $value .= $1;

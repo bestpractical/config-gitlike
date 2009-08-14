@@ -1,3 +1,7 @@
+1.02 - UNRELEASED
+
+* Bugfixes and extra tests for escaped \ and " in subsections (sunnavy)
+
 1.01 - 2009-08-11
 
 * Fix breakage under Mouse due to Moose references

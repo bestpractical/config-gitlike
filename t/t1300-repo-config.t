@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 140;
+use Test::More tests => 142;
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -1452,22 +1452,6 @@ lives_and {
 
 throws_ok {
     $config->set(
-        key => 'section.foo\bar.baz',
-        value => 'none',
-        filename => $config_filename,
-    ) } qr/unescaped backslash or \" in subsection/im,
-'subsection names cannot contain unescaped backslash in compat mode';
-
-throws_ok {
-    $config->set(
-        key => 'section.foo"bar.baz',
-        value => 'none',
-        filename => $config_filename,
-    ) } qr/unescaped backslash or \" in subsection/im,
-'subsection names cannot contain unescaped " in compat mode';
-
-throws_ok {
-    $config->set(
         key => "section.foo\nbar.baz",
         value => 'none',
         filename => $config_filename,
@@ -1476,13 +1460,6 @@ throws_ok {
 
 # these should be the case in no-compat mode too
 $config->compatible(0);
-throws_ok {
-    $config->set(
-        key => 'section.foo\bar.baz',
-        value => 'none',
-        filename => $config_filename,
-    ) } qr/unescaped backslash or \" in subsection/im,
-'subsection names cannot contain unescaped backslash in nocompat mode';
 
 throws_ok {
     $config->set(
@@ -1491,14 +1468,6 @@ throws_ok {
         filename => $config_filename,
     ) } qr/invalid key/im,
 'subsection names cannot contain unescaped newlines in nocompat mode';
-
-throws_ok {
-    $config->set(
-        key => 'section.foo"bar.baz',
-        value => 'none',
-        filename => $config_filename,
-    ) } qr/unescaped backslash or \" in subsection/im,
-'subsection names cannot contain unescaped " in nocompat mode';
 
 # Make sure some bad configs throw errors.
 burp(
@@ -1560,6 +1529,32 @@ while ( my ( $k, $v ) = each %special_in_value ) {
             is( $config->get( key => "section.foo" ), $value );
         }
         "value with $k occurs $times time"
+          . (
+            $times == 1
+            ? ''
+            : 's'
+          );
+    }
+}
+
+# special chars in subsection
+my %special_in_subsection =
+  ( backslash => "\\", doublequote => q{"} );
+
+while ( my ( $k, $v ) = each %special_in_subsection ) {
+    for my $times ( 1 .. 3 ) {
+        my $key = 'section.foo' . $v x $times . 'bar' . $v x $times . 'baz';
+
+        lives_and {
+            $config->set(
+                key      => $key,
+                value    => 'none',
+                filename => $config_filename,
+            );
+            $config->load;
+            is( $config->get( key => $key ), 'none' );
+        }
+        "subsection with $k occurs with $times time"
           . (
             $times == 1
             ? ''

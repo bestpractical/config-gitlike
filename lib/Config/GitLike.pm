@@ -229,7 +229,7 @@ sub parse_content {
             $section = lc $1;
             if ($2) {
                 my $subsection = $2;
-                my $check      = $2;
+                my $check = $2;
                 $check =~ s{\\\\}{}g;
                 $check =~ s{\\"}{}g;
                 return $args{error}->(
@@ -240,6 +240,8 @@ sub parse_content {
                     # double-quotes or backslashes
                 ) if $check =~ /\\|"/;
 
+                $subsection =~ s{\\\\}{\\}g;
+                $subsection =~ s{\\"}{"}g;
                 $section .= ".$subsection";
             }
 
@@ -717,12 +719,11 @@ sub group_set {
         die "Invalid section name $section\n"
             if $self->_invalid_section_name($section);
 
+        my $unescaped_subsection;
         if ( defined $subsection ) {
-            my $check = $subsection;
-            $check =~ s!\\\\!!g;
-            $check =~ s!\\"!!g;
-            die "Unescaped backslash or \" in subsection $subsection\n"
-              if $check =~ /\\|"/;
+            $unescaped_subsection = $subsection;
+            $subsection =~ s!\\!\\\\!g;
+            $subsection =~ s!"!\\"!g;
         }
 
         $args{value} = $self->cast(
@@ -735,9 +736,10 @@ sub group_set {
         my @replace;
 
         # use this for comparison
-        my $cmp_section
-            = defined $subsection ? join('.', lc $section, $subsection)
-                                  : lc $section;
+        my $cmp_section =
+          defined $unescaped_subsection
+          ? join( '.', lc $section, $unescaped_subsection )
+          : lc $section;
         # ...but this for writing (don't lowercase)
         my $combined_section
             = defined $subsection ? join('.', $section, $subsection)

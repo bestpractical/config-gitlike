@@ -1,6 +1,8 @@
-1.02 - UNRELEASED
+1.02 - 2009-08-19
 
 * Bugfixes and extra tests for escaped \ and " in subsections (sunnavy)
+* win32 fixes (sunnavy)
+* auto-escape \ and " in subsections on set (sunnavy)
 
 1.01 - 2009-08-11
 

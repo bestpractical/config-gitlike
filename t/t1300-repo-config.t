@@ -1065,33 +1065,38 @@ EOF
 $config->load;
 is( $config->dump, $expect, 'value continued on next line' );
 
-# testing symlinked configuration
-symlink File::Spec->catfile( $config_dirname, 'notyet' ),
-    File::Spec->catfile( $config_dirname, 'myconfig' );
 
-my $myconfig = TestConfig->new(
-    confname => 'myconfig',
-    tmpdir   => $config_dirname
-);
-$myconfig->set(
-    key      => 'test.frotz',
-    value    => 'nitfol',
-    filename => File::Spec->catfile( $config_dirname, 'myconfig' )
-);
-my $notyet = TestConfig->new(
-    confname => 'notyet',
-    tmpdir   => $config_dirname
-);
-$notyet->set(
-    key      => 'test.xyzzy',
-    value    => 'rezrov',
-    filename => File::Spec->catfile( $config_dirname, 'notyet' )
-);
-$notyet->load;
-is( $notyet->get( key => 'test.frotz' ),
-    'nitfol', 'can get 1st val from symlink' );
-is( $notyet->get( key => 'test.xyzzy' ),
-    'rezrov', 'can get 2nd val from symlink' );
+# testing symlinked configuration
+SKIP: {
+    skip 'windows does *not* support symlink', 2 if $^O =~ /MSWin/;
+
+    symlink File::Spec->catfile( $config_dirname, 'notyet' ),
+      File::Spec->catfile( $config_dirname, 'myconfig' );
+
+    my $myconfig = TestConfig->new(
+        confname => 'myconfig',
+        tmpdir   => $config_dirname
+    );
+    $myconfig->set(
+        key      => 'test.frotz',
+        value    => 'nitfol',
+        filename => File::Spec->catfile( $config_dirname, 'myconfig' )
+    );
+    my $notyet = TestConfig->new(
+        confname => 'notyet',
+        tmpdir   => $config_dirname
+    );
+    $notyet->set(
+        key      => 'test.xyzzy',
+        value    => 'rezrov',
+        filename => File::Spec->catfile( $config_dirname, 'notyet' )
+    );
+    $notyet->load;
+    is( $notyet->get( key => 'test.frotz' ),
+        'nitfol', 'can get 1st val from symlink' );
+    is( $notyet->get( key => 'test.xyzzy' ),
+        'rezrov', 'can get 2nd val from symlink' );
+}
 
 ### ADDITIONAL TESTS (not from the git test suite, just things that I didn't
 ### see tests for and think should be tested)
@@ -1214,7 +1219,6 @@ is( $config->get( key => 'section.b' ), 'off',
 
 is( $config->get( key => 'section.a' ), 'off',
     'user config is loaded');
-
 burp(
     $global_config,
     '[section]

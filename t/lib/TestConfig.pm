@@ -18,20 +18,24 @@ has 'tmpdir' => (
 
 sub dir_file {
     my $self = shift;
-
-    return File::Spec->catfile($self->tmpdir, $self->confname);
+    my $dirs = (File::Spec->splitpath( $self->tmpdir, 1 ))[1];
+    return File::Spec->catfile($dirs, $self->confname);
 }
 
 sub user_file {
     my $self = shift;
 
-    return File::Spec->catfile($self->tmpdir, 'home', $self->confname);
+    return File::Spec->catfile(
+        ( File::Spec->splitpath( $self->tmpdir, 1 ) )[1],
+        'home', $self->confname );
 }
 
 sub global_file {
     my $self = shift;
 
-    return File::Spec->catfile($self->tmpdir, 'etc', $self->confname);
+    return File::Spec->catfile(
+        ( File::Spec->splitpath( $self->tmpdir, 1 ) )[1],
+        'etc', $self->confname );
 }
 
 __PACKAGE__->meta->make_immutable;

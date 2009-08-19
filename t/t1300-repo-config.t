@@ -1537,7 +1537,7 @@ while ( my ( $k, $v ) = each %special_in_value ) {
     }
 }
 
-# special chars in subsection
+# special chars in subsection, particularly auto-escaping \ and " on set
 my %special_in_subsection =
   ( backslash => "\\", doublequote => q{"} );
 

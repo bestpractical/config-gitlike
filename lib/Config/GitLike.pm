@@ -409,9 +409,9 @@ sub cast {
     );
 
     use constant {
-        BOOL_TRUE_REGEX => qr/^(?:true|yes|on|-?0*1)$/i,
+        BOOL_TRUE_REGEX  => qr/^(?:true|yes|on|-?0*1)$/i,
         BOOL_FALSE_REGEX => qr/^(?:false|no|off|0*)$/i,
-        NUM_REGEX => qr/^-?[0-9]*\.?[0-9]*[kmg]?$/,
+        NUM_REGEX        => qr/^-?[0-9]*\.?[0-9]*[kmg]?$/,
     };
 
     if (defined $args{as} && $args{as} eq 'bool-or-int') {
@@ -719,11 +719,13 @@ sub group_set {
         die "Invalid section name $section\n"
             if $self->_invalid_section_name($section);
 
+        # if the subsection to write contains unescaped \ or ", escape them
+        # automatically
         my $unescaped_subsection;
         if ( defined $subsection ) {
             $unescaped_subsection = $subsection;
-            $subsection =~ s!\\!\\\\!g;
-            $subsection =~ s!"!\\"!g;
+            $subsection =~ s{\\}{\\\\}g;
+            $subsection =~ s{"}{\\"}g;
         }
 
         $args{value} = $self->cast(

@@ -54,7 +54,7 @@ has 'compatible' => (
 
 sub set_multiple {
     my $self = shift;
-    my ($name, $mult) = @_, 1;
+    my ($name, $mult) = (@_, 1);
     $self->multiple->{$name} = $mult;
 }
 

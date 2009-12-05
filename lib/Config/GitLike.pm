@@ -796,7 +796,7 @@ sub group_set {
 
         if (defined $args{value}) {
             if (@replace
-                    && (!$args{multiple} || $args{replace_all})) {
+                    && (!$args{multiple} || $args{filter} || $args{replace_all})) {
                 # Replacing existing value(s)
 
                 # if the string we're replacing with is not the same length as

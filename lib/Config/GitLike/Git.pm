@@ -1,30 +1,50 @@
 package Config::GitLike::Git;
 use Any::Moose;
+use strict;
+use warnings;
 
 extends 'Config::GitLike';
 
 has 'confname' => (
-    default => 'git',
+    default => 'gitconfig',
 );
 
 has 'compatible' => (
     default => 1,
 );
 
-sub dir_file {
+sub is_git_dir {
     my $self = shift;
-    return ".git/config";
+    my $path = File::Spec->rel2abs( shift );
+    $path =~ s{/+$}{};
+
+    ($path) = grep {-d} map {"$path$_"} (".git/.git", "/.git", ".git", "");
+    return unless $path;
+
+    # Has to have objects/ and refs/ directories
+    return unless -d "$path/objects" and -d "$path/refs";
+
+    # Has to have a HEAD file
+    return unless -f "$path/HEAD";
+
+    if (-l "$path/HEAD" ) {
+        # Symbolic link into refs/
+        return unless readlink("$path/HEAD") =~ m{^refs/};
+    } else {
+        open(HEAD, "$path/HEAD") or return;
+        my ($line) = <HEAD>;
+        close HEAD;
+        # Is either 'ref: refs/whatever' or a sha1
+        return unless $line =~ m{^(ref:\s*refs/|[0-9a-fA-F]{20})};
+    }
+    return $path;
 }
 
-sub user_file {
+sub load_dirs {
     my $self = shift;
-    return
-        File::Spec->catfile( $ENV{'HOME'}, ".gitconfig" );
-}
-
-sub global_file {
-    my $self = shift;
-    return "/etc/gitconfig";
+    my $path = shift;
+    my $dir = $self->is_git_dir($path) or return;
+    $self->load_file( File::Spec->catfile( $dir, "config" ) );
 }
 
 __PACKAGE__->meta->make_immutable;

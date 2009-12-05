@@ -794,6 +794,10 @@ sub group_set {
         die "Multiple occurrences of non-multiple key?"
             if @replace > 1 && !$args{multiple};
 
+        # We're only replacing the first occurrance unless they said
+        # to replace them all.
+        @replace = ($replace[0]) if @replace and $args{value} and not $args{replace_all};
+
         if (defined $args{value}) {
             if (@replace
                     && (!$args{multiple} || $args{filter} || $args{replace_all})) {

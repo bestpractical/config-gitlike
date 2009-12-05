@@ -339,7 +339,7 @@ is_deeply(
 $config->set(
     key      => 'nextsection.nonewline',
     value    => 'wow3',
-    filter   => qr/wow$/,
+    filter   => qr/wow/,
     filename => $config_filename
 );
 

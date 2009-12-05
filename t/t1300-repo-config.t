@@ -353,14 +353,14 @@ noIndent= sillyValue ; 'nother silly comment
 	NoNewLine = wow2 for me
 EOF
     ;
-
-is( slurp($config_filename), $expect, 'multivar replace' );
+is( slurp($config_filename), $expect, 'multivar replace only the first match' );
 
 $config->load;
 throws_ok {
     $config->set(
         key      => 'nextsection.nonewline',
-        filename => $config_filename
+        filename => $config_filename,
+        multiple => 0,  # Otherwise we Do The Right Thing, as we know it's multiple
     );
 }
 qr/Multiple occurrences of non-multiple key/i, 'ambiguous unset';

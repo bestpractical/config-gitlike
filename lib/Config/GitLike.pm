@@ -139,6 +139,7 @@ sub _read_config {
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
+    $self->data({}) unless $self->is_loaded;
     my $c = $self->_read_config($filename);
 
     $self->parse_content(

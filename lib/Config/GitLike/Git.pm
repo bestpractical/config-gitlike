@@ -51,6 +51,9 @@ L<Config::GitLike|Config::GitLike>, you do not need to pass a confname to its
 constructor. This module also enables the L<Config::GitLike|Config::GitLike>
 option to maintain git compatibility when reading and writing variables.
 
+Notethat it only checks the current directory for being the root of a
+git repository; it also does not work on bare repositories.
+
 =head1 METHODS
 
 This module overrides these methods from C<Config::GitLike>:

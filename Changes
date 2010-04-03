@@ -1,11 +1,24 @@
+1.04 - 2010-04-03
+
+* The functionality of Config::GitLike::Cascaded has been folded into
+  Config::GitLike as a "cascade" option, and the subpackage is now
+  deprecated. (alexmv)
+* Config::GitLike::Git->new->load("/path/to/git") when the path is
+  lacking a ".git", or is a bare repository, now works. (alexmv)
+* Fixed a bug wherein the home directory config file would be loaded
+  twice, causing all values to be multiple, if that was your cwd.
+  Reported by rjbs. (alexmv)
+* Allow explicitly calling ->load_file without previously having
+  called ->load (alexmv)
+
 1.03 - 2010-01-03
 
-*  Filter without replace_all should only replace the _first_ match (alexmv)
-*  Having a matching filter with multiple and not replace_all does mean
-   replacement (alexmv)
-*  Fix a test that failed because multiple now works, and we're too smart
-   (alexmv)
-*  Fix for when ->set_multiple called with no arguments (alexmv)
+* Filter without replace_all should only replace the _first_ match (alexmv)
+* Having a matching filter with multiple and not replace_all does mean
+  replacement (alexmv)
+* Fix a test that failed because multiple now works, and we're too smart
+  (alexmv)
+* Fix for when ->set_multiple called with no arguments (alexmv)
 
 1.02 - 2009-08-19
 

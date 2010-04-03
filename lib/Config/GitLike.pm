@@ -1299,7 +1299,7 @@ scalar context.
 =head2 config_filenames
 
 An array reference containing the absolute filenames of all config files
-that are currently loaded.
+that are currently loaded, in the order they were loaded.
 
 =head2 get
 

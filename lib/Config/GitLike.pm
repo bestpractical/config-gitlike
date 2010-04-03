@@ -1683,7 +1683,7 @@ under the same terms as Perl itself.
 
 =head1 COPYRIGHT
 
-Copyright 2009 Best Practical Solutions, LLC
+Copyright 2010 Best Practical Solutions, LLC
 
 =head1 AUTHORS
 

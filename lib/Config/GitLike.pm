@@ -52,6 +52,12 @@ has 'compatible' => (
     default => 0,
 );
 
+has 'cascade' => (
+    is => 'rw',
+    isa => 'Bool',
+    default => 0,
+);
+
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = (@_, 1);
@@ -87,16 +93,18 @@ sub load_dirs {
     my $path = shift;
     my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
     my @dirs = File::Spec->splitdir( $dirs );
+    my @found;
     while (@dirs) {
         my $path = File::Spec->catpath(
             $vol, File::Spec->catdir(@dirs), $self->dir_file
         );
         if (-f $path) {
-            $self->load_file( $path );
-            last;
+            push @found, $path;
+            last unless $self->cascade;
         }
         pop @dirs;
     }
+    $self->load_file( $_ ) for reverse @found;
 }
 
 sub global_file {
@@ -1439,6 +1447,12 @@ Parameters:
 Just a convenience wrapper around L<"rename_section"> for readability's sake.
 Removes the given section (which you can do by renaming to nothing as well).
 
+=head2 cascade( $bool )
+
+Gets or sets if only the B<deepest> configuration file in a directory
+tree is loaded, or if all of them are loaded, shallowest to deepest.
+Alternately, C<cascade =E<gt> 1> can be passed to C<new>.
+
 =head1 METHODS YOU MAY WISH TO OVERRIDE
 
 If your application's configuration layout is different from the default, e.g.
@@ -1673,8 +1687,8 @@ configuration files or code snippets.
 =head1 SEE ALSO
 
 L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration_file>,
-L<Config::GitLike::Cascaded|Config::GitLike::Cascaded>, L<http://syncwith.us/>
-(C<Config::GitLike> is used in Prophet/SD and provides a working example)
+L<Config::GitLike::Git>, L<http://syncwith.us/> (C<Config::GitLike> is
+used in Prophet/SD and provides a working example)
 
 =head1 LICENSE
 

@@ -62,17 +62,20 @@ Config::GitLike::Git - load Git configuration files
 
     use Config::GitLike::Git;
     my $config = Config::GitLike::Git->new;
+    $config->load("/path/to/repo");
 
 =head1 DESCRIPTION
 
-This is a modification of L<Config::GitLike|Config::GitLike> to look at the
-same locations that Git writes to. Unlike with
-L<Config::GitLike|Config::GitLike>, you do not need to pass a confname to its
-constructor. This module also enables the L<Config::GitLike|Config::GitLike>
-option to maintain git compatibility when reading and writing variables.
+This is a modification of L<Config::GitLike> to look at the same
+locations that Git writes to. Unlike with L<Config::GitLike>, you do
+not need to pass a confname to its constructor. This module also
+enables the L<Config::GitLike> option to maintain git compatibility
+when reading and writing variables.
 
-Notethat it only checks the current directory for being the root of a
-git repository; it also does not work on bare repositories.
+L<Config::GitLike/load> should be passed path to the top level of a
+git repository -- this defaults to the current directory.  It will
+append C<.git> as necessary.  It supports both bare and non-bare
+repositories.
 
 =head1 METHODS
 

@@ -7,6 +7,7 @@ extends 'Config::GitLike';
 
 has 'cascade' => (
     default => 1,
+    is => 'rw',
 );
 
 __PACKAGE__->meta->make_immutable;

@@ -5,11 +5,11 @@ use warnings;
 
 extends 'Config::GitLike';
 
-has 'confname' => (
+has '+confname' => (
     default => 'gitconfig',
 );
 
-has 'compatible' => (
+has '+compatible' => (
     default => 1,
 );
 

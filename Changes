@@ -1,3 +1,9 @@
+1.05 2011-01-07
+
+* support Module::Install::ExtraTests 0.007 (sunnavy)
+* properly set is => 'rw' in inherited classes (trs, alexmv)
+* silence lc warnings on undef under perl 5.12 (iarnell@gmail.com)
+
 1.04 - 2010-04-03
 
 * The functionality of Config::GitLike::Cascaded has been folded into

@@ -1457,6 +1457,10 @@ Gets or sets if only the B<deepest> configuration file in a directory
 tree is loaded, or if all of them are loaded, shallowest to deepest.
 Alternately, C<cascade =E<gt> 1> can be passed to C<new>.
 
+=head2 origins
+
+Returns a hash mapping each config key with the file it was loaded from.
+
 =head1 METHODS YOU MAY WISH TO OVERRIDE
 
 If your application's configuration layout is different from the default, e.g.

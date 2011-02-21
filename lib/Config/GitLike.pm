@@ -1407,20 +1407,15 @@ values. To override this, pass in C<multiple =E<gt> 1>. If you want to replace
 all instances of a multiple-valued key with a new value, you need to pass
 in C<replace_all =E<gt> 1> as well.
 
-=head2 group_set
-
-Parameters:
-
-    filename => '/home/foo/.bar'
-    args_ref => $ref
+=head2 group_set( $filename, $array_ref )
 
 Same as L<"set">, but set a group of variables at the same time without
 writing to disk separately for each.
 
-C<args_ref> is an array reference containing a list of hash references which
-are essentially hashes of arguments to C<set>, excluding the C<filename>
-argument since that is specified separately and the same file is used for all
-variables to be set at once.
+C<$array_ref> contains a list of hash references which are essentially hashes
+of arguments to C<set>, excluding the C<$filename> argument since that is
+specified separately and the same file is used for all variables to be set at
+once.
 
 =head2 rename_section
 

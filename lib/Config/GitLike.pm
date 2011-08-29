@@ -333,7 +333,7 @@ sub parse_content {
                     $value .= $v;
                 }
                 # valid value (no escape codes)
-                elsif ($c =~ s/\A([^\t \\\n]+)//im) {
+                elsif ($c =~ s/\A([^\t \\\n"]+)//im) {
                     $value .= $1;
                 # unparseable
                 }

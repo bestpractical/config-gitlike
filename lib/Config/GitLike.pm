@@ -1308,7 +1308,7 @@ Returns a hash copy of all loaded configuration data stored in the module
 after the files have been loaded, or a hashref to this hash in
 scalar context.
 
-=head2 config_filenames
+=head2 config_files
 
 An array reference containing the absolute filenames of all config files
 that are currently loaded, in the order they were loaded.

@@ -147,11 +147,13 @@ sub _read_config {
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
-    $self->data({}) unless $self->is_loaded;
 
     return $self->data if grep {$_ eq $filename} @{$self->config_files};
 
     my $c = $self->_read_config($filename);
+    return unless defined $c;
+
+    $self->data({}) unless $self->is_loaded;
     $self->parse_content(
         content  => $c,
         callback => sub {
@@ -1522,10 +1524,6 @@ after the file has been loaded, or undef if no user config file is found.
 Takes a string containing the path to a file, opens it if it exists, loads its
 config variables into memory, and returns the currently loaded config
 variables (a hashref).
-
-Note that you ought to only call this subroutine with an argument that you
-know exists, otherwise config files that don't exist will be recorded as
-havind been loaded.
 
 =head2 parse_content
 

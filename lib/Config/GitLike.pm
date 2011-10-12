@@ -1141,7 +1141,6 @@ Code that uses this config module might look like:
     use Config::GitLike;
 
     my $c = Config::GitLike->new(confname => 'config');
-    $c->load;
 
     $c->get( key => 'section.name' );
     # make the return value a Perl true/false value
@@ -1303,6 +1302,10 @@ the C<Config::GitLike> object. You can change it if you want by
 passing in a new name (and then reloading via L<"load">).
 
 =head2 load
+
+This method is usually called implicitly on the first L</get>,
+L</get_all>, L</get_regex>, or L</dump> call used, and is only necessary
+if you want to explicitly reload the data.
 
 Load the global, local, and directory configuration file with the filename
 C<confname>(if they exist). Configuration variables loaded later

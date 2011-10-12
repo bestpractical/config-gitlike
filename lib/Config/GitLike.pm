@@ -121,7 +121,7 @@ sub load_global {
 sub user_file {
     my $self = shift;
     return
-        File::Spec->catfile( $ENV{'HOME'}, "." . $self->confname );
+        File::Spec->catfile( "~", "." . $self->confname );
 }
 
 sub load_user {
@@ -147,6 +147,10 @@ sub _read_config {
 sub load_file {
     my $self = shift;
     my ($filename) = @_;
+
+    # Do some canonicalization
+    $filename =~ s/~/$ENV{'HOME'}/g;
+    $filename = File::Spec->rel2abs($filename);
 
     return $self->data if grep {$_ eq $filename} @{$self->config_files};
 

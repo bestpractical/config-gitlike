@@ -42,7 +42,7 @@ sub wanted {
     $data =~ s/^=head.+?(^=cut|\Z)//gms;
 
     # look for use and use base statements
-    $used{$1}{$File::Find::name}++ while $data =~ /^\s*use\s+([\w:]+)/gm;
+    $used{$1}{$File::Find::name}++ while $data =~ /^\s*use\s+(\d(\.\d+)*|[\w:]+)/gm;
     while ( $data =~ m|^\s*use base qw.([\w\s:]+)|gm ) {
         $used{$_}{$File::Find::name}++ for split ' ', $1;
     }
@@ -65,7 +65,7 @@ my %required;
 for ( sort keys %used ) {
     my $first_in = Module::CoreList->first_release($_);
     next if defined $first_in and $first_in <= 5.00803;
-    next if /^(Config::GitLike|inc|t)(::|$)/;
+    next if /^(Config::GitLike|inc|t|\d(\.\d+)*)(::|$)/;
 
     #warn $_;
     ok( exists $required{$_}, "$_ in Makefile.PL" )

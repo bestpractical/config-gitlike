@@ -604,6 +604,8 @@ sub get_regexp {
 sub dump {
     my $self = shift;
 
+    $self->load unless $self->is_loaded;
+
     return %{$self->data} if wantarray;
 
     my $data = '';

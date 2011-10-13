@@ -93,6 +93,15 @@ The per-user configuration file is F<~/.gitconfig>
 
 The per-host configuration file is F</etc/gitconfig>
 
+=head2 is_git_dir
+
+Returns true if a file contains the necessary files (as git would reckon
+it) for the path to be a git repository.
+
+=head2 load_dirs
+
+Loads the relevant .git/config file.
+
 =head1 SEE ALSO
 
 L<Config::GitLike|Config::GitLike>

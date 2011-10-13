@@ -145,8 +145,16 @@ sub _read_config {
 }
 
 sub load_file {
-    my $self = shift;
+    my $ref = shift;
     my ($filename) = @_;
+
+    my $self;
+    if (ref $ref) {
+        $self = $ref;
+    } else {
+        # Set up a temporary object
+        $self = $ref->new( confname => "" );
+    }
 
     # Do some canonicalization
     $filename =~ s/~/$ENV{'HOME'}/g;
@@ -155,7 +163,10 @@ sub load_file {
     return $self->data if grep {$_ eq $filename} @{$self->config_files};
 
     my $c = $self->_read_config($filename);
-    return unless defined $c;
+    unless (defined $c) {
+        die "Failed to load $filename: $!\n" if not ref $ref;
+        return;
+    }
 
     $self->data({}) unless $self->is_loaded;
     $self->parse_content(
@@ -1140,6 +1151,11 @@ Code that uses this config module might look like:
 
     use Config::GitLike;
 
+    # just load a specific file
+    my $data = Config::GitLike->load_file("~/.fooconf");
+
+    # or use the object interface to load /etc/config, ~/.config, and
+    # `pwd`/.config
     my $c = Config::GitLike->new(confname => 'config');
 
     $c->get( key => 'section.name' );
@@ -1280,6 +1296,9 @@ There are the methods you're likely to use the most.
 =head2 new( confname => 'config' )
 
 Create a new configuration object with the base config name C<confname>.
+If you are interested simply in loading one specific file, and not in
+automatically loading a global file, a per-user file, and a
+per-directory file, see L</load_file>, below.
 
 C<confname> is used to construct the filenames that will be loaded; by
 default, these are C</etc/confname> (global configuration file),
@@ -1533,6 +1552,9 @@ after the file has been loaded, or undef if no user config file is found.
 Takes a string containing the path to a file, opens it if it exists, loads its
 config variables into memory, and returns the currently loaded config
 variables (a hashref).
+
+This method can also be called as a class method, which will die if the
+file cannot be read.
 
 =head2 parse_content
 

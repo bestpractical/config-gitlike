@@ -1221,7 +1221,7 @@ L<http://www.kernel.org/pub/software/scm/git/docs/git-config.html#_configuration
 for details on the syntax of git configuration files. We won't waste pixels
 on the nitty gritty here.
 
-While the behaviour of a couple of this module's methods differ slightly
+While the behavior of a couple of this module's methods differ slightly
 from the C<git config> equivalents, this module can read any config file
 written by git. The converse is usually true, but only if you don't take
 advantage of this module's increased permissiveness when it comes to key
@@ -1262,7 +1262,7 @@ for each type.
 All get and set methods can filter what values they return via their
 C<filter> parameter, which is expected to be a string that is a valid
 regex. If you want to filter items OUT instead of IN, you can
-prefix your regex with a ! and that'll do the trick.
+prefix your regex with a ! and that will do the trick.
 
 Now, on the the methods!
 
@@ -1614,7 +1614,7 @@ Return C<value> cast into the type specified by C<as>.
 Valid values for C<as> are C<bool>, C<int>, C<num>, or C<bool-or-num>. For
 C<bool>, C<true>, C<yes>, C<on>, C<1>, and undef are translated into a true
 value (for Perl); anything else is false. Specifying a true value for the
-C<human> arg will get you a human-readable 'true' or 'false' rather than a
+C<human> argument will get you a human-readable 'true' or 'false' rather than a
 value that plays along with Perl's definition of truthiness (0 or 1).
 
 For C<int>s and C<num>s, if C<value> ends in C<k>, C<m>, or C<g>, it will be

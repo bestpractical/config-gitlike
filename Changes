@@ -1,3 +1,15 @@
+1.06 2011-10-12
+
+* Allow calling ->load_file as a class method, for simple use cases
+  (alexmv)
+* Fix a parsing bug when quoted strings directly adjoined to unquoted
+  strings (alexmv)
+* Calling ->load_file on a nonexistant file no longer sets ->is_loaded
+  (alexmv)
+* Document that getters implicitly call ->load (alexmv)
+* Make ->dump implicitly call ->load as well (alexmv)
+* Minor POD fixes (alexmv, spang)
+
 1.05 2011-01-07
 
 * support Module::Install::ExtraTests 0.007 (sunnavy)

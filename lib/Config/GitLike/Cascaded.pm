@@ -23,7 +23,7 @@ Config::GitLike::Cascaded - git-like config file parsing with cascaded inheritan
 
 =head1 SYNOPSIS
 
-This module exists purely for backwards compatability; its use is
+This module exists purely for backwards compatibility; its use is
 deprecated, and will be removed in a future release.
 
 =head1 DESCRIPTION

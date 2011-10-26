@@ -12,3 +12,4 @@
 ^xt/
 ^MANIFEST.SKIP
 ^cover_db/
+^Config-GitLike-*

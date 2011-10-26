@@ -1,3 +1,8 @@
+1.07 2011-10-25
+
+* Fix a spelling mistake in Config::GitLike::Cascaded
+  (gregoa@debian.org, forwarded by carnil@debian.org)
+
 1.06 2011-10-12
 
 * Allow calling ->load_file as a class method, for simple use cases

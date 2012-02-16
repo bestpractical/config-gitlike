@@ -114,7 +114,6 @@ sub global_file {
 
 sub load_global {
     my $self = shift;
-    return unless -f $self->global_file;
     return $self->load_file( $self->global_file );
 }
 
@@ -126,7 +125,6 @@ sub user_file {
 
 sub load_user {
     my $self = shift;
-    return unless -f $self->user_file;
     return $self->load_file( $self->user_file );
 }
 
@@ -135,6 +133,7 @@ sub _read_config {
     my $self = shift;
     my $filename = shift;
 
+    return unless -f $filename and -r $filename;
     open(my $fh, '<', $filename) or return;
 
     my $c = do {local $/; <$fh>};

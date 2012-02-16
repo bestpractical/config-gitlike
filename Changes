@@ -1,3 +1,8 @@
+1.08 2012-02-15
+
+* Fix loading of user_file, broken in dcdd01f, due to unexpanded ~
+  (alexmv, clkao@clkao.org)
+
 1.07 2011-10-25
 
 * Fix a spelling mistake in Config::GitLike::Cascaded

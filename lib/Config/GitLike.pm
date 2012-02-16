@@ -7,7 +7,7 @@ use Scalar::Util qw(openhandle);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use 5.008;
 
-our $VERSION = '1.07';
+our $VERSION = '1.08';
 
 
 has 'confname' => (

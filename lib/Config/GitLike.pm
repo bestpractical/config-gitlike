@@ -1553,7 +1553,8 @@ config variables into memory, and returns the currently loaded config
 variables (a hashref).
 
 This method can also be called as a class method, which will die if the
-file cannot be read.
+file cannot be read.  If called as an instance method, returns undef on
+failure.
 
 =head2 parse_content
 

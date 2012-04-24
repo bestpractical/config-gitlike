@@ -513,20 +513,18 @@ sub get {
 
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
-    if (ref $v) {
-        my @results;
-        if (defined $args{filter}) {
-            if ($args{filter} =~ s/^!//) {
-                @results = grep { !/$args{filter}/i } @{$v};
-            }
-            else {
-                @results = grep { m/$args{filter}/i } @{$v};
-            }
+    my @values = ref $v ? @{$v} : ($v);
+    if (defined $args{filter}) {
+        if ($args{filter} =~ s/^!//) {
+            @values = grep { !/$args{filter}/i } @values;
         }
-        die "Multiple values" unless @results <= 1;
-        $v = $results[0];
+        else {
+            @values = grep { m/$args{filter}/i } @values;
+        }
     }
-    return $self->cast( value => $v, as => $args{as},
+    die "Multiple values" unless @values <= 1;
+
+    return $self->cast( value => $values[0], as => $args{as},
         human => $args{human} );
 }
 

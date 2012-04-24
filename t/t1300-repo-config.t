@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 142;
+use Test::More tests => 144;
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -1144,6 +1144,15 @@ is_deeply(
 );
 
 is_deeply(
+    scalar $config->get_regexp( key => 'x', as => 'bool', human => 1 ),
+    {   'section.exact'     => 'false',
+        'section.inexact'   => 'true',
+        'section.delicieux' => 'true'
+    },
+    'get_regexp human casting works'
+);
+
+is_deeply(
     scalar $config->get_regexp( key => 'x', filter => '!0' ),
     { 'section.delicieux' => 'true' },
     'get_regexp filter works'
@@ -1156,6 +1165,12 @@ is_deeply(
     scalar $config->get_all( key => 'section.b', as => 'bool' ),
     [ 0, 1 ],
     'get_all casting works'
+);
+
+is_deeply(
+    scalar $config->get_all( key => 'section.b', as => 'bool', human => 1 ),
+    [ 'false', 'true' ],
+    'get_all human casting works'
 );
 
 # we don't strip the quotes on this, right?

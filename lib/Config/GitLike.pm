@@ -548,6 +548,7 @@ sub get_all {
     my %args = (
         key => undef,
         as  => undef,
+        human => undef,
         @_,
     );
     $self->load unless $self->is_loaded;
@@ -569,7 +570,7 @@ sub get_all {
         }
     }
 
-    @v = map {$self->cast( value => $_, as => $args{as} )} @v;
+    @v = map {$self->cast( value => $_, as => $args{as}, human => $args{human} )} @v;
     return wantarray ? @v : \@v;
 }
 
@@ -580,6 +581,7 @@ sub get_regexp {
         key => undef,
         filter => undef,
         as  => undef,
+        human => undef,
         @_,
     );
 
@@ -606,7 +608,8 @@ sub get_regexp {
     @results{keys %results} =
         map { $self->cast(
                 value => $results{$_},
-                as => $args{as}
+                as => $args{as},
+                human => $args{human},
             ); } keys %results;
     return wantarray ? %results : \%results;
 }
@@ -1348,6 +1351,7 @@ Parameters:
 
     key => 'sect.subsect.key'
     as => 'int'
+    human => 1
     filter => '!foo
 
 Return the config value associated with C<key> cast as an C<as>.
@@ -1374,6 +1378,7 @@ Parameters:
     key => 'section.sub'
     filter => 'regex'
     as => 'int'
+    human => 1
 
 Like L<"get"> but does not fail if the number of values for the key is not
 exactly one.
@@ -1387,6 +1392,7 @@ Parameters:
     key => 'regex'
     filter => 'regex'
     as => 'bool'
+    human => 1
 
 Similar to L<"get_all"> but searches for values based on a key regex.
 

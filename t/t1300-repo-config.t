@@ -2,7 +2,8 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 142;
+#use Test::More tests => 142;
+use Test::More 'no_plan';
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -364,6 +365,15 @@ throws_ok {
     );
 }
 qr/Multiple occurrences of non-multiple key/i, 'ambiguous unset';
+
+throws_ok {
+    $config->get(
+        key      => 'nextsection.nonewline',
+        filename => $config_filename,
+        filter   => undef,
+    );
+}
+qr/Multiple values/i, 'ambiguous get';
 
 throws_ok {
     $config->set(

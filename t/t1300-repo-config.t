@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 142;
+use Test::More tests => 146;
 use Test::Exception;
 use File::Spec;
 use File::Temp qw/tempdir/;
@@ -1562,3 +1562,55 @@ while ( my ( $k, $v ) = each %special_in_subsection ) {
           );
     }
 }
+
+# Test add_comment.
+unlink $config_filename;
+$config->add_comment(
+    filename => $config_filename,
+    comment  => 'yo dawg',
+);
+$expect = "# yo dawg\n";
+is( slurp($config_filename), $expect, 'comment' );
+
+# Make sure leading whitespace is maintained.
+$config->add_comment(
+    filename => $config_filename,
+    comment  => '   for you.'
+);
+
+$expect .= "#    for you.\n";
+is( slurp($config_filename), $expect, 'comment with ws' );
+
+# Make sur it interacts well with configuration.
+$config->set(
+    key      => 'core.penguin',
+    value    => 'little blue',
+    filename => $config_filename
+);
+
+$config->add_comment(
+    filename => $config_filename,
+    comment  => "this is\n  for you\n  \n  you know",
+    indented => 1,
+);
+
+my $expect = <<'EOF'
+# yo dawg
+#    for you.
+[core]
+	penguin = little blue
+# this is
+  # for you
+  # 
+  # you know
+EOF
+    ;
+is( slurp($config_filename), $expect, 'indented comment with newlines and config' );
+
+$config->add_comment(
+    filename  => $config_filename,
+    comment   => '  gimme a semicolon',
+    semicolon => 1,
+);
+$expect .= ";   gimme a semicolon\n";
+is( slurp($config_filename), $expect, 'comment with semicolon' );

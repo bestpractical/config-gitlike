@@ -4,7 +4,7 @@ use Any::Moose;
 use File::Spec;
 use Cwd;
 use Scalar::Util qw(openhandle);
-use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
+use Fcntl qw(O_CREAT O_APPEND O_EXCL O_WRONLY);
 use 5.008;
 
 our $VERSION = '1.08';
@@ -1120,6 +1120,31 @@ sub remove_section {
         $args{filename} );
 }
 
+sub add_comment {
+    my $self = shift;
+    my (%args) = (
+        comment     => undef,
+        filename    => undef,
+        indented    => undef,
+        semicolon   => undef,
+        @_
+    );
+
+    my $filename = $args{filename} or die "No filename passed to add_comment()";
+    die "No comment to add\n" unless defined $args{comment};
+
+    # Comment, preserving leading whitespace.
+    my $chars = $args{indented} ? '[[:blank:]]*' : '';
+    my $char  = $args{semicolon} ? ';' : '#';
+    (my $comment = $args{comment}) =~ s/^($chars)/$1$char /mg;
+    $comment .= "\n" if $comment !~ /\n\z/;
+
+    my $c = $self->_read_config($filename);
+    $c = '' unless defined $c;
+
+    return $self->_write_config( $filename, $c . $comment );
+}
+
 1;
 
 __END__
@@ -1525,6 +1550,23 @@ You'll want to use L<"load_file"> to load config files from your overridden
 version of this subroutine.
 
 Returns nothing of note.
+
+=head2 add_comment
+
+Parameters:
+
+     comment   => "Begin editing here\n and then stop",
+     filename  => '/file/to/edit'
+     indented  => 1,
+     semicolon => 0,
+
+Add a comment to the specified configuration file. The C<comment> and
+C<filename> parameters are required. Comments will be added to the file with
+C<# > at the begnning of each line of the comment. Pass a true value to
+C<semicolon> if you'd rather they start with C<; >. If your comments are
+indented with leading white space, and you want that white space to appear in
+front of the comment character, rather than after, pass a true value to
+C<indented>.
 
 =head1 OTHER METHODS
 

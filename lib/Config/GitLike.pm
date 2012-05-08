@@ -514,10 +514,10 @@ sub _get {
     my @values = ref $v ? @{$v} : ($v);
     if (defined $args{filter} and length $args{filter}) {
         if ($args{filter} =~ s/^!//) {
-            @values = grep { !/$args{filter}/i } @values;
+            @values = grep { not defined or not m/$args{filter}/i } @values;
         }
         else {
-            @values = grep { m/$args{filter}/i } @values;
+            @values = grep { defined and m/$args{filter}/i } @values;
         }
     }
     return @values;
@@ -589,12 +589,16 @@ sub get_regexp {
 
     if (defined $args{filter} and length $args{filter}) {
         if ($args{filter} =~ s/^!//) {
-            map { delete $results{$_} if $results{$_} =~ m/$args{filter}/i }
-                keys %results;
+            for (keys %results) {
+                delete $results{$_} if defined $results{$_}
+                    and $results{$_} =~ m/$args{filter}/i;
+            }
         }
         else {
-            map { delete $results{$_} if $results{$_} !~ m/$args{filter}/i }
-                keys %results;
+            for (keys %results) {
+                delete $results{$_} if not defined $results{$_}
+                    or $results{$_} !~ m/$args{filter}/i;
+            }
         }
     }
 

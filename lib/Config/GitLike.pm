@@ -513,7 +513,10 @@ sub _get {
     my $v = $self->data->{$args{key}};
     my @values = ref $v ? @{$v} : ($v);
     if (defined $args{filter} and length $args{filter}) {
-        if ($args{filter} =~ s/^!//) {
+        if ($args{filter} eq "!") {
+            @values = ();
+        }
+        elsif ($args{filter} =~ s/^!//) {
             @values = grep { not defined or not m/$args{filter}/i } @values;
         }
         else {
@@ -588,7 +591,10 @@ sub get_regexp {
     }
 
     if (defined $args{filter} and length $args{filter}) {
-        if ($args{filter} =~ s/^!//) {
+        if ($args{filter} eq "!") {
+            %results = ();
+        }
+        elsif ($args{filter} =~ s/^!//) {
             for (keys %results) {
                 delete $results{$_} if defined $results{$_}
                     and $results{$_} =~ m/$args{filter}/i;
@@ -803,7 +809,10 @@ sub group_set {
                         # be called multiple times and we don't want to
                         # modify the original value
                         my $filter = $args{filter};
-                        if ($filter =~ s/^!//) {
+                        if ($filter eq "!") {
+                            # Never matches
+                        }
+                        elsif ($filter =~ s/^!//) {
                             $matched = 1 if ($got{value} !~ m/$filter/i);
                         }
                         elsif ($got{value} =~ m/$filter/i) {

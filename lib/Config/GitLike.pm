@@ -495,12 +495,10 @@ sub cast {
     }
 }
 
-sub get {
+sub _get {
     my $self = shift;
     my %args = (
-        key => undef,
-        as  => undef,
-        human  => undef,
+        key    => undef,
         filter => '',
         @_,
     );
@@ -511,7 +509,7 @@ sub get {
         grep { defined } (lc $section, $subsection, lc $name),
     );
 
-    return undef unless exists $self->data->{$args{key}};
+    return () unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     my @values = ref $v ? @{$v} : ($v);
     if (defined $args{filter} and length $args{filter}) {
@@ -522,10 +520,7 @@ sub get {
             @values = grep { m/$args{filter}/i } @values;
         }
     }
-    die "Multiple values" unless @values <= 1;
-
-    return $self->cast( value => $values[0], as => $args{as},
-        human => $args{human} );
+    return @values;
 }
 
 # I'm pretty sure that someone can come up with an edge case where stripping
@@ -541,32 +536,34 @@ sub _remove_balanced_quotes {
     return $key;
 }
 
+sub get {
+    my $self = shift;
+    my %args = (
+        key    => undef,
+        as     => undef,
+        human  => undef,
+        filter => '',
+        @_,
+    );
+
+    my @v = $self->_get( %args );
+    return undef unless @v;
+    die "Multiple values" if @v > 1;
+
+    return $self->cast( value => $v[0], as => $args{as},
+        human => $args{human} );
+}
+
 sub get_all {
     my $self = shift;
     my %args = (
-        key => undef,
-        as  => undef,
+        key    => undef,
+        as     => undef,
+        filter => '',
         @_,
     );
-    $self->load unless $self->is_loaded;
-    my ($section, $subsection, $name) = _split_key($args{key});
-    $args{key} = join('.',
-        grep { defined } (lc $section, $subsection, lc $name),
-    );
 
-    return undef unless exists $self->data->{$args{key}};
-    my $v = $self->data->{$args{key}};
-    my @v = ref $v ? @{$v} : ($v);
-
-    if (defined $args{filter} and length $args{filter}) {
-        if ($args{filter} =~ s/^!//) {
-            @v = grep { !/$args{filter}/i } @v;
-        }
-        else {
-            @v = grep { m/$args{filter}/i } @v;
-        }
-    }
-
+    my @v = $self->_get( %args );
     @v = map {$self->cast( value => $_, as => $args{as} )} @v;
     return wantarray ? @v : \@v;
 }

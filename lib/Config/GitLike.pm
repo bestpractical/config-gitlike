@@ -583,12 +583,11 @@ sub get_regexp {
 
     $self->load unless $self->is_loaded;
 
-    $args{key} = lc $args{key};
     $args{key} = '.' unless defined $args{key} and length $args{key};
 
     my %results;
     for my $key (keys %{$self->data}) {
-        $results{$key} = $self->data->{$key} if lc $key =~ m/$args{key}/i;
+        $results{$key} = $self->data->{$key} if $key =~ m/$args{key}/i;
     }
 
     if (defined $args{filter} and length $args{filter}) {

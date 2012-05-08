@@ -514,7 +514,7 @@ sub get {
     return undef unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
     my @values = ref $v ? @{$v} : ($v);
-    if (defined $args{filter}) {
+    if (defined $args{filter} and length $args{filter}) {
         if ($args{filter} =~ s/^!//) {
             @values = grep { !/$args{filter}/i } @values;
         }
@@ -558,7 +558,7 @@ sub get_all {
     my $v = $self->data->{$args{key}};
     my @v = ref $v ? @{$v} : ($v);
 
-    if (defined $args{filter}) {
+    if (defined $args{filter} and length $args{filter}) {
         if ($args{filter} =~ s/^!//) {
             @v = grep { !/$args{filter}/i } @v;
         }
@@ -590,7 +590,7 @@ sub get_regexp {
         $results{$key} = $self->data->{$key} if lc $key =~ m/$args{key}/i;
     }
 
-    if (defined $args{filter}) {
+    if (defined $args{filter} and length $args{filter}) {
         if ($args{filter} =~ s/^!//) {
             map { delete $results{$_} if $results{$_} =~ m/$args{filter}/i }
                 keys %results;
@@ -797,7 +797,7 @@ sub group_set {
                 my $matched = 0;
                 # variable names are case-insensitive
                 if (lc $name eq $got{name}) {
-                    if (defined $args{filter}) {
+                    if (defined $args{filter} and length $args{filter}) {
                         # copy the filter arg here since this callback may
                         # be called multiple times and we don't want to
                         # modify the original value

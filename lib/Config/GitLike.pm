@@ -1359,19 +1359,21 @@ Parameters:
 
     key => 'sect.subsect.key'
     as => 'int'
-    filter => '!foo
+    human => 1
+    filter => '!foo'
 
 Return the config value associated with C<key> cast as an C<as>.
 
-The C<key> option is required (will return undef if unspecified); the C<as>
-option is not (will return a string by default). Sections and subsections
-are specified in the key by separating them from the key name with a .
-character. Sections, subsections, and keys may all be quoted (double or
-single quotes).
+The C<key> option is required (will return undef if unspecified); the
+C<as> amd C<human> options are not (see L<cast> for their
+meaning). Sections and subsections are specified in the key by
+separating them from the key name with a C<.> character. Sections,
+subsections, and keys may all be quoted (double or single quotes).
 
-If C<key> doesn't exist in the config, undef is returned. Dies with
-the exception "Multiple values" if the given key has more than one
-value associated with it. (Use L<"get_all"> to retrieve multiple values.)
+If C<key> doesn't exist in the config, or has no values which match the
+filter, undef is returned. Dies with the exception "Multiple values" if
+the given key has more than one value associated with it which match the
+filter. (Use L<"get_all"> to retrieve multiple values.)
 
 Calls L<"load"> if it hasn't been done already. Note that if you've run any
 C<set> calls to the loaded configuration files since the last time they were
@@ -1383,8 +1385,9 @@ configuration data may not match the configuration variables on-disk.
 Parameters:
 
     key => 'section.sub'
-    filter => 'regex'
     as => 'int'
+    human => 1
+    filter => 'regex'
 
 Like L<"get"> but does not fail if the number of values for the key is not
 exactly one.
@@ -1396,8 +1399,9 @@ Returns a list of values (or an arrayref in scalar context).
 Parameters:
 
     key => 'regex'
-    filter => 'regex'
     as => 'bool'
+    human => 1
+    filter => 'regex'
 
 Similar to L<"get_all"> but searches for values based on a key regex.
 

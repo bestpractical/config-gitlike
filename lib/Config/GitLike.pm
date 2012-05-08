@@ -562,12 +562,13 @@ sub get_all {
     my %args = (
         key    => undef,
         as     => undef,
+        human  => undef,
         filter => '',
         @_,
     );
 
     my @v = $self->_get( %args );
-    @v = map {$self->cast( value => $_, as => $args{as} )} @v;
+    @v = map {$self->cast( value => $_, as => $args{as}, human => $args{human} )} @v;
     return wantarray ? @v : \@v;
 }
 
@@ -575,9 +576,10 @@ sub get_regexp {
     my $self = shift;
 
     my %args = (
-        key => undef,
-        filter => undef,
-        as  => undef,
+        key    => undef,
+        as     => undef,
+        human  => undef,
+        filter => '',
         @_,
     );
 
@@ -611,7 +613,8 @@ sub get_regexp {
     @results{keys %results} =
         map { $self->cast(
                 value => $results{$_},
-                as => $args{as}
+                as    => $args{as},
+                human => $args{human},
             ); } keys %results;
     return wantarray ? %results : \%results;
 }

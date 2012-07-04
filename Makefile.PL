@@ -6,6 +6,7 @@ repository('http://github.com/bestpractical/config-gitlike');
 perl_version '5.008';
 requires 'Any::Moose';
 build_requires 'Test::Exception';
+build_requires 'Test::NoWarnings';
 extra_tests();
 sign();
 WriteAll();

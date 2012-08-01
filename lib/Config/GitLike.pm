@@ -58,6 +58,11 @@ has 'cascade' => (
     default => 0,
 );
 
+has 'encoding' => (
+    is => 'rw',
+    isa => 'Maybe[Str]',
+);
+
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = (@_, 1);
@@ -135,6 +140,9 @@ sub _read_config {
 
     return unless -f $filename and -r $filename;
     open(my $fh, '<', $filename) or return;
+    if (my $encoding = $self->encoding) {
+        binmode $fh, ":encoding($encoding)";
+    }
 
     my $c = do {local $/; <$fh>};
 
@@ -1007,6 +1015,9 @@ sub _write_config {
     # way git does it)
     sysopen(my $fh, "${filename}.lock", O_CREAT|O_EXCL|O_WRONLY)
         or die "Can't open ${filename}.lock for writing: $!\n";
+    if (my $encoding = $self->encoding) {
+        binmode $fh, ":encoding($encoding)";
+    }
     print $fh $content;
     close $fh;
 
@@ -1348,6 +1359,11 @@ If you wish to enforce only being able to read/write config files that
 git can read or write, pass in C<compatible =E<gt> 1> to this
 constructor. The default rules for some components of the config
 file are more permissive than git's (see L<"DIFFERENCES FROM GIT-CONFIG">).
+
+If you know that your Git config files are encoded with a known character
+encoding, pass in C<encoding =E<gt> $encoding> to specify the name of the
+encoding. Config::GitLike will then properly serialize and deserialized the
+files with that encoding.
 
 =head2 confname
 

@@ -22,7 +22,7 @@ $config->add_comment(
     comment  => 'yo dawg',
 );
 my $expect = "# yo dawg\n";
-is( slurp($config_filename), $expect, 'comment' );
+is( $config->slurp, $expect, 'comment' );
 
 # Make sure leading whitespace is maintained.
 $config->add_comment(
@@ -31,7 +31,7 @@ $config->add_comment(
 );
 
 $expect .= "#    for you.\n";
-is( slurp($config_filename), $expect, 'comment with ws' );
+is( $config->slurp, $expect, 'comment with ws' );
 
 # Make sure it interacts well with configuration.
 $config->set(
@@ -57,7 +57,7 @@ $expect = <<'EOF'
   # you know
 EOF
     ;
-is( slurp($config_filename), $expect, 'indented comment with newlines and config' );
+is( $config->slurp, $expect, 'indented comment with newlines and config' );
 
 $config->add_comment(
     filename  => $config_filename,
@@ -65,15 +65,6 @@ $config->add_comment(
     semicolon => 1,
 );
 $expect .= ";   gimme a semicolon\n";
-is( slurp($config_filename), $expect, 'comment with semicolon' );
+is( $config->slurp, $expect, 'comment with semicolon' );
 
 done_testing;
-
-
-
-sub slurp {
-    my $file = shift;
-    local ($/);
-    open( my $fh, $file ) or die "Unable to open file ${file}: $!";
-    return <$fh>;
-}

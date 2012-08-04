@@ -38,6 +38,24 @@ sub global_file {
         'etc', $self->confname );
 }
 
+sub slurp {
+    my $self = shift;
+    my $file = shift || $self->dir_file;
+    local ($/);
+    open( my $fh, $file ) or die "Unable to open file $file: $!";
+    return <$fh>;
+}
+
+sub burp {
+    my $self = shift;
+    my $content = pop;
+    my $file_name = shift || $self->dir_file;
+
+    open( my $fh, ">", $file_name )
+        || die "can't open $file_name: $!";
+    print $fh $content;
+}
+
 __PACKAGE__->meta->make_immutable;
 no Any::Moose;
 

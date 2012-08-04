@@ -15,22 +15,6 @@ use TestConfig;
 # Additional tests that were not pulled from the git-config test-suite
 # are also marked.
 
-sub slurp {
-    my $file = shift;
-    local ($/);
-    open( my $fh, $file ) or die "Unable to open file ${file}: $!";
-    return <$fh>;
-}
-
-sub burp {
-    my ( $file_name, $content, $append ) = @_;
-    my $mode = $append ? '>>' : '>';
-
-    open( my $fh, $mode, $file_name )
-        || die "can't open ${file_name}: $!";
-    print $fh $content;
-}
-
 # create an empty test directory in /tmp
 my $config_dirname = tempdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} );
 my $config_filename = File::Spec->catfile( $config_dirname, 'config' );
@@ -55,7 +39,7 @@ my $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'initial' );
+is( $config->slurp, $expect, 'initial' );
 
 $config->set(
     key      => 'Core.Movie',
@@ -70,7 +54,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'mixed case' );
+is( $config->slurp, $expect, 'mixed case' );
 
 $config->set(
     key      => 'Cores.WhatEver',
@@ -87,7 +71,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'similar section' );
+is( $config->slurp, $expect, 'similar section' );
 
 $config->set(
     key      => 'CORE.UPPERCASE',
@@ -105,7 +89,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'similar section' );
+is( $config->slurp, $expect, 'similar section' );
 
 # set returns nothing on success
 lives_ok {
@@ -139,10 +123,9 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'non-match result' );
+is( $config->slurp, $expect, 'non-match result' );
 
-burp(
-    $config_filename,
+$config->burp(
     '[alpha]
 bar = foo
 [beta]
@@ -161,10 +144,9 @@ bar = foo
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'unset with cont. lines is correct' );
+is( $config->slurp, $expect, 'unset with cont. lines is correct' );
 
-burp(
-    $config_filename,
+$config->burp(
     '[beta] ; silly comment # another comment
 noIndent= sillyValue ; \'nother silly comment
 
@@ -196,7 +178,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'multiple unset is correct' );
+is( $config->slurp, $expect, 'multiple unset is correct' );
 
 copy( $config2_filename, $config_filename )
     or die "File cannot be copied: $!";
@@ -225,7 +207,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'all replaced' );
+is( $config->slurp, $expect, 'all replaced' );
 
 $config->set(
     key      => 'beta.haha',
@@ -244,7 +226,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'really mean test' );
+is( $config->slurp, $expect, 'really mean test' );
 
 $config->set(
     key      => 'nextsection.nonewline',
@@ -267,7 +249,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'really really mean test' );
+is( $config->slurp, $expect, 'really really mean test' );
 
 $config->load;
 is( $config->get( key => 'beta.haha' ), 'alpha', 'get value' );
@@ -285,7 +267,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'unset' );
+is( $config->slurp, $expect, 'unset' );
 
 $config->set(
     key      => 'nextsection.NoNewLine',
@@ -305,7 +287,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'multivar' );
+is( $config->slurp, $expect, 'multivar' );
 
 $config->load;
 lives_ok {
@@ -353,7 +335,7 @@ noIndent= sillyValue ; 'nother silly comment
 	NoNewLine = wow2 for me
 EOF
     ;
-is( slurp($config_filename), $expect, 'multivar replace only the first match' );
+is( $config->slurp, $expect, 'multivar replace only the first match' );
 
 $config->load;
 throws_ok {
@@ -393,7 +375,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'multivar unset' );
+is( $config->slurp, $expect, 'multivar unset' );
 
 # ADDITIONAL TESTS (7): our rules for valid keys are
 # much more permissive than git's
@@ -488,7 +470,7 @@ noIndent= sillyValue ; 'nother silly comment
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'hierarchical section value' );
+is( $config->slurp, $expect, 'hierarchical section value' );
 
 $expect = <<'EOF'
 123456.a123=987
@@ -537,8 +519,7 @@ $config->load;
 is_deeply( scalar $config->get_all( key => 'nextsection.nonewline' ),
     $expect, '--add' );
 
-burp(
-    $config_filename,
+$config->burp(
     '[novalue]
 	variable
 [emptyvalue]
@@ -580,8 +561,7 @@ ok( !$config->get( key => 'emptyvalue.variable', as => 'bool' ),
     'get bool variable with empty value' );
 
 # testing alternate subsection notation
-burp(
-    $config_filename,
+$config->burp(
     '[a.b]
 	c = d
 '
@@ -597,7 +577,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect,
+is( $config->slurp, $expect,
     'new section is partial match of another' );
 
 $config->set( key => 'b.x', value => 'y', filename => $config_filename );
@@ -615,7 +595,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect,
+is( $config->slurp, $expect,
     'new variable inserts into proper section' );
 
 # testing rename_section
@@ -623,8 +603,7 @@ is( slurp($config_filename), $expect,
 # NOTE: added comment after [branch "1 234 blabl/a"] to check that our
 # implementation doesn't blow away trailing text after a rename like
 # git-config currently does
-burp(
-    $config_filename,
+$config->burp(
     '# Hallo
 	#Bello
 [branch "eins"]
@@ -657,7 +636,7 @@ weird
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'rename succeeded' );
+is( $config->slurp, $expect, 'rename succeeded' );
 
 throws_ok {
     $config->rename_section(
@@ -668,7 +647,7 @@ throws_ok {
 }
 qr/no such section/i, 'rename non-existing section';
 
-is( slurp($config_filename), $expect,
+is( $config->slurp, $expect,
     'rename non-existing section changes nothing' );
 
 lives_ok {
@@ -695,16 +674,15 @@ weird
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'rename succeeded' );
+is( $config->slurp, $expect, 'rename succeeded' );
 
 # [branch "vier"] doesn't get interpreted as a real section
 # header because the variable definition before it means
 # that all the way to the end of that line is a part of
 # a's value
-burp(
-    $config_filename,
-    '[branch "zwei"] a = 1 [branch "vier"]
-', 1
+$config->burp(
+    $config->slurp . '[branch "zwei"] a = 1 [branch "vier"]
+'
 );
 
 lives_ok {
@@ -726,7 +704,7 @@ weird
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'section was removed properly' );
+is( $config->slurp, $expect, 'section was removed properly' );
 
 unlink $config_filename;
 
@@ -754,7 +732,7 @@ $config->set(
     value    => '%Ggitcvs2.%a.%m.sqlite',
     filename => $config_filename
 );
-is( slurp($config_filename), $expect, 'section ending' );
+is( $config->slurp, $expect, 'section ending' );
 
 # testing int casting
 
@@ -897,12 +875,11 @@ $config->set(
     as       => 'int'
 );
 
-is( slurp($config_filename), $expect, 'set --int' );
+is( $config->slurp, $expect, 'set --int' );
 
 unlink $config_filename;
 
-burp(
-    $config_filename,
+$config->burp(
     '[bool]
     true1 = on
     true2 = yes
@@ -989,7 +966,7 @@ $config->set(
     filename => $config_filename
 );
 
-is( slurp($config_filename), $expect, 'set bool-or-int' );
+is( $config->slurp, $expect, 'set bool-or-int' );
 
 unlink $config_filename;
 
@@ -1023,7 +1000,7 @@ $expect = <<'EOF'
 EOF
     ;
 
-is( slurp($config_filename), $expect, 'quoting' );
+is( $config->slurp, $expect, 'quoting' );
 
 throws_ok {
     $config->set(
@@ -1043,8 +1020,7 @@ lives_ok {
 }
 'value with newline';
 
-burp(
-    $config_filename,
+$config->burp(
     '[section]
 	; comment \
 	continued = cont\
@@ -1102,8 +1078,7 @@ SKIP: {
 ### see tests for and think should be tested)
 
 # weird yet valid edge case
-burp(
-    $config_filename,
+$config->burp(
     '# foo
 [section] [section2] a = 1
 b = 2
@@ -1120,8 +1095,7 @@ EOF
 
 is( $config->dump, $expect, 'section headers are valid w/out newline' );
 
-burp(
-    $config_filename,
+$config->burp(
     '# foo
 [section]
 	b = off
@@ -1197,14 +1171,14 @@ my $repo_config = $config_filename;
 mkdir File::Spec->catdir( $config_dirname, 'etc' );
 mkdir File::Spec->catdir( $config_dirname, 'home' );
 
-burp(
+$config->burp(
     $repo_config,
     '[section]
 	b = off
 '
 );
 
-burp(
+$config->burp(
     $user_config,
     '[section]
 	b = on
@@ -1219,7 +1193,7 @@ is( $config->get( key => 'section.b' ), 'off',
 
 is( $config->get( key => 'section.a' ), 'off',
     'user config is loaded');
-burp(
+$config->burp(
     $global_config,
     '[section]
 	b = true
@@ -1270,8 +1244,7 @@ unlink $user_config;
 unlink $repo_config;
 
 # Test to make sure subsection comparison is case-sensitive.
-burp(
-    $config_filename,
+$config->burp(
     '[section "FOO"]
 	b = true
 [section "foo"]
@@ -1288,8 +1261,7 @@ is( $config->get( key => 'section.FOO.b' ), 'true',
 
 # Test section names with with weird characters in them (non git-compat)
 
-burp(
-    $config_filename,
+$config->burp(
     '[http://www.example.com/test/]
 	admin = foo@bar.com
 [http://www.example.com/test/ "users"]
@@ -1323,8 +1295,7 @@ $config->compatible(1);
 # variables names that start with numbers or contain characters other
 # than a-zA-Z- are illegal
 
-burp(
-    $config_filename,
+$config->burp(
     '[section "FOO"]
 	foo..bar = true
 '
@@ -1333,8 +1304,7 @@ burp(
 throws_ok { $config->load; } qr/error parsing/im,
     'variable names cannot contain . in git-compat mode';
 
-burp(
-    $config_filename,
+$config->burp(
     '[section "FOO"]
 	foo%@$#bar = true
 '
@@ -1343,8 +1313,7 @@ burp(
 throws_ok { $config->load; } qr/error parsing/im,
     'variable names cannot contain symbols in git-compat mode';
 
-burp(
-    $config_filename,
+$config->burp(
     '[section "FOO"]
 	01inval = true
 '
@@ -1353,8 +1322,7 @@ burp(
 throws_ok { $config->load; } qr/error parsing/im,
     'variable names cannot start with a number git-compat mode';
 
-burp(
-    $config_filename,
+$config->burp(
     '[section "FOO"]
 	-inval = true
 '
@@ -1394,8 +1362,7 @@ throws_ok {
 
 # section names cannot contain characters other than a-zA-Z-. in compat mode
 
-burp(
-    $config_filename,
+$config->burp(
     '[se$^%#& "FOO"]
 	a = b
 '
@@ -1404,8 +1371,7 @@ burp(
 throws_ok { $config->load; } qr/error parsing/im,
     'section names cannot contain symbols in git-compat mode';
 
-burp(
-    $config_filename,
+$config->burp(
     '[sec tion "FOO"]
 	a = b
 '
@@ -1414,8 +1380,7 @@ burp(
 throws_ok { $config->load; } qr/error parsing/im,
     'section names cannot contain whitespace in git-compat mode';
 
-burp(
-    $config_filename,
+$config->burp(
     '[-foo.bar-baz "FOO"]
 	a = b
 '
@@ -1470,8 +1435,7 @@ throws_ok {
 'subsection names cannot contain unescaped newlines in nocompat mode';
 
 # Make sure some bad configs throw errors.
-burp(
-    $config_filename,
+$config->burp(
     '[testing "FOO"
 	a = b
 '
@@ -1482,8 +1446,7 @@ $config->compatible(1);
 throws_ok { $config->load } qr/error parsing/i, 'invalid section (compat)';
 
 # This should be OK since the variable name doesn't start with [
-burp(
-    $config_filename,
+$config->burp(
     '[test]
 	a[] = b
 '

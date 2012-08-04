@@ -29,21 +29,14 @@ UTF8: {
 }
 
 my $expect = qq{[core]\n\tpenguin = little blüe\n};
-is( slurp($config_filename), $expect, 'Value with UTF-8' );
+is( $config->slurp, $expect, 'Value with UTF-8' );
 
 $config->load;
 UTF8: {
     use utf8;
     is $config->get(key => 'core.penguin'), 'little blüe',
-        'Get value with UTF-8';;
+        'Get value with UTF-8';
 }
 
 
 done_testing;
-
-sub slurp {
-    my $file = shift;
-    local ($/);
-    open( my $fh, $file ) or die "Unable to open file ${file}: $!";
-    return <$fh>;
-}

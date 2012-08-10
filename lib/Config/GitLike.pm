@@ -295,6 +295,10 @@ sub parse_content {
         #
         # in compatible mode, keys can contain only 0-9a-z-
         elsif ($c =~ s/$key_regex//) {
+            return $args{error}->(
+                content => $args{content},
+                offset  => $offset,
+            ) unless defined $section;
             $args{callback}->(
                 section    => $section,
                 name       => lc $1,
@@ -305,6 +309,10 @@ sub parse_content {
         # key/value pairs (this particular regex matches only the key part and
         # the =, with unlimited whitespace around the =)
         elsif ($c =~ s/$key_value_regex//) {
+            return $args{error}->(
+                content => $args{content},
+                offset  => $offset,
+            ) unless defined $section;
             my $name = lc $1;
             my $value = "";
             # parse the value
@@ -404,9 +412,9 @@ sub define {
         origin  => undef,
         @_,
     );
-    return unless defined $args{name};
+    return unless defined $args{section} and defined $args{name};
     $args{name} = lc $args{name};
-    my $key = join(".", grep {defined} @args{qw/section name/});
+    my $key = join(".", @args{qw/section name/});
 
     # we're either adding a whole new key or adding a multiple key from
     # the same file
@@ -715,24 +723,19 @@ sub _split_key {
         $section = $key;
     }
     else {
-        $key =~ /^(?:(.*)\.)?(.*)$/;
+        $key =~ /^(.*)\.(.*)$/;
         # If we wanted, we could interpret quoting of the section name to
         # allow for setting keys with section names including . characters.
         # But git-config doesn't do that, so we won't bother for now. (Right
         # now it will read these section names correctly but won't set them.)
-        ($section, $name) = map { _remove_balanced_quotes($_) }
-            grep { defined $_ } ($1, $2);
+        ($section, $name) = map { _remove_balanced_quotes($_) } ($1, $2);
     }
 
     # Make sure the section name we're comparing against has
     # case-insensitive section names and case-sensitive subsection names.
-    if (defined $section) {
-        $section =~ m/^([^.]+)(?:\.(.*))?$/;
-        ($section, $subsection) = ($1, $2);
-    }
-    else {
-        ($section, $subsection) = (undef) x 2;
-    }
+    $section =~ m/^([^.]+)(?:\.(.*))?$/;
+    ($section, $subsection) = ($1, $2);
+
     return ($section, $subsection, $name);
 }
 
@@ -748,13 +751,9 @@ sub group_set {
         my %args = %{$args_hash};
 
         my ($section, $subsection, $name) = _split_key($args{key});
-        my $key;
-        {
-            no warnings 'uninitialized';
-            $key = join( '.',
-                grep { defined } (lc $section, $subsection, lc $name),
-            );
-        }
+        my $key = join( '.',
+            grep { defined } (lc $section, $subsection, lc $name),
+        );
 
         $args{multiple} = $self->is_multiple($key)
             unless defined $args{multiple};
@@ -1703,7 +1702,7 @@ Given a section, a key name, and a value¸ store this information
 in memory in the config object.
 
 Returns the value that was just defined on success, or undef
-if no name is given and thus the key cannot be defined.
+if no name and section were given and thus the key cannot be defined.
 
 =head2 cast
 

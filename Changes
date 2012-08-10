@@ -1,3 +1,13 @@
+1.09 2012-08-10
+
+* Multiple bug fixes concerning filters, including empty filters,
+  valueless keys, and applying filters to single values.
+* Add "human" argument to get_all and get_regexp, to match get
+* Add an add_comment method
+* Add an encoding attribute, which adds the appropriate layer on file
+  I/O
+* Enforce that all keys must have sections, as git 1.7.4.4 began doing
+
 1.08 2012-02-15
 
 * Fix loading of user_file, broken in dcdd01f, due to unexpanded ~

@@ -521,9 +521,12 @@ sub _get {
     $self->load unless $self->is_loaded;
 
     my ($section, $subsection, $name) = _split_key($args{key});
-    $args{key} = join( '.',
-        grep { defined } (lc $section, $subsection, lc $name),
-    );
+    $args{key} = do {
+        no warnings 'uninitialized';
+        join( '.',
+            grep { defined } (lc $section, $subsection, lc $name),
+        );
+    };
 
     return () unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};

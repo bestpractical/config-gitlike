@@ -2,8 +2,9 @@ use strict;
 use warnings;
 
 use File::Copy;
-use Test::More tests => 142;
+use Test::More tests => 144;
 use Test::Exception;
+use Test::NoWarnings;
 use File::Spec;
 use File::Temp qw/tempdir/;
 use lib 't/lib';
@@ -253,6 +254,7 @@ is( $config->slurp, $expect, 'really really mean test' );
 
 $config->load;
 is( $config->get( key => 'beta.haha' ), 'alpha', 'get value' );
+is( $config->get( key => 'beta' ), undef, 'get nonexistent value' );
 
 # unset beta.haha (unset accomplished by value = undef)
 $config->set( key => 'beta.haha', filename => $config_filename );

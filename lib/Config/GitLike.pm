@@ -1532,6 +1532,23 @@ Parameters:
 Just a convenience wrapper around L<"rename_section"> for readability's sake.
 Removes the given section (which you can do by renaming to nothing as well).
 
+=head2 add_comment
+
+Parameters:
+
+     comment   => "Begin editing here\n and then stop",
+     filename  => '/file/to/edit'
+     indented  => 1,
+     semicolon => 0,
+
+Add a comment to the specified configuration file. The C<comment> and
+C<filename> parameters are required. Comments will be added to the file with
+C<# > at the begnning of each line of the comment. Pass a true value to
+C<semicolon> if you'd rather they start with C<; >. If your comments are
+indented with leading white space, and you want that white space to appear in
+front of the comment character, rather than after, pass a true value to
+C<indented>.
+
 =head2 cascade( $bool )
 
 Gets or sets if only the B<deepest> configuration file in a directory
@@ -1582,23 +1599,6 @@ You'll want to use L<"load_file"> to load config files from your overridden
 version of this subroutine.
 
 Returns nothing of note.
-
-=head2 add_comment
-
-Parameters:
-
-     comment   => "Begin editing here\n and then stop",
-     filename  => '/file/to/edit'
-     indented  => 1,
-     semicolon => 0,
-
-Add a comment to the specified configuration file. The C<comment> and
-C<filename> parameters are required. Comments will be added to the file with
-C<# > at the begnning of each line of the comment. Pass a true value to
-C<semicolon> if you'd rather they start with C<; >. If your comments are
-indented with leading white space, and you want that white space to appear in
-front of the comment character, rather than after, pass a true value to
-C<indented>.
 
 =head1 OTHER METHODS
 

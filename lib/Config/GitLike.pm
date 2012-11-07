@@ -520,10 +520,7 @@ sub _get {
     );
     $self->load unless $self->is_loaded;
 
-    my ($section, $subsection, $name) = _split_key($args{key});
-    $args{key} = join( '.',
-        grep { defined } (lc $section, $subsection, lc $name),
-    );
+    $args{key} = $self->canonical_case( $args{key} );
 
     return () unless exists $self->data->{$args{key}};
     my $v = $self->data->{$args{key}};
@@ -633,6 +630,15 @@ sub get_regexp {
                 human => $args{human},
             ); } keys %results;
     return wantarray ? %results : \%results;
+}
+
+sub canonical_case {
+    my $self = shift;
+    my ($key) = @_;
+    my ($section, $subsection, $name) = _split_key($key);
+    return join( '.',
+        grep { defined } (lc $section, $subsection, lc $name),
+    );
 }
 
 sub dump {
@@ -751,9 +757,7 @@ sub group_set {
         my %args = %{$args_hash};
 
         my ($section, $subsection, $name) = _split_key($args{key});
-        my $key = join( '.',
-            grep { defined } (lc $section, $subsection, lc $name),
-        );
+        my $key = $self->canonical_case( $args{key} );
 
         $args{multiple} = $self->is_multiple($key)
             unless defined $args{multiple};
@@ -1752,6 +1756,12 @@ Parameters:
 Return a string containing the key/value pair as they should be printed in the
 config file. If C<bare> is true, the returned value is not tab-indented nor
 followed by a newline.
+
+=head2 canonical_case( $name )
+
+Given a full key name, returns the canonical name of the key; this is
+the key with the section and name lower-cased; the subsection is left
+as-is.
 
 =head1 DIFFERENCES FROM GIT-CONFIG
 

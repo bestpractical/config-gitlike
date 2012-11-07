@@ -31,6 +31,12 @@ has 'multiple' => (
     default => sub { +{} },
 );
 
+has 'casing' => (
+    is => 'rw',
+    isa => 'HashRef',
+    default => sub { +{} },
+);
+
 # filename where the definition of each key was loaded from
 has 'origins' => (
     is => 'rw',
@@ -301,7 +307,7 @@ sub parse_content {
             ) unless defined $section;
             $args{callback}->(
                 section    => $section,
-                name       => lc $1,
+                name       => $1,
                 offset     => $offset,
                 length     => ($length - length($c)) - $offset,
             );
@@ -313,7 +319,7 @@ sub parse_content {
                 content => $args{content},
                 offset  => $offset,
             ) unless defined $section;
-            my $name = lc $1;
+            my $name = $1;
             my $value = "";
             # parse the value
             while (1) {
@@ -413,6 +419,7 @@ sub define {
         @_,
     );
     return unless defined $args{section} and defined $args{name};
+    my $original_case = join(".", @args{qw/section name/});
     $args{name} = lc $args{name};
     my $key = join(".", @args{qw/section name/});
 
@@ -422,13 +429,16 @@ sub define {
         || $self->origins->{$key} eq $args{origin} ) {
         if ($self->is_multiple($key)) {
             push @{$self->data->{$key} ||= []}, $args{value};
+            push @{$self->casing->{$key} ||= []}, $original_case;
         }
         elsif (exists $self->data->{$key}) {
             $self->set_multiple($key);
             $self->data->{$key} = [$self->data->{$key}, $args{value}];
+            $self->casing->{$key}  = [$self->casing->{$key}, $original_case];
         }
         else {
             $self->data->{$key} = $args{value};
+            $self->casing->{$key} = $original_case;
         }
     }
     # we're overriding a key set previously from a different file
@@ -438,6 +448,7 @@ sub define {
 
         # set the new value
         $self->data->{$key} = $args{value};
+        $self->casing->{$key} = $original_case;
     }
     $self->origins->{$key} = $args{origin};
 }
@@ -632,6 +643,12 @@ sub get_regexp {
     return wantarray ? %results : \%results;
 }
 
+sub original_case {
+    my $self = shift;
+    my ($key) = @_;
+    return $self->casing->{ $self->canonical_case( $key ) };
+}
+
 sub canonical_case {
     my $self = shift;
     my ($key) = @_;
@@ -652,6 +669,8 @@ sub dump {
     for my $key (sort keys %{$self->data}) {
         my $str;
         if (defined $self->data->{$key}) {
+            # For git compat, we intentionally always write out in
+            # canonical (i.e. lower) case.
             $str = "$key=";
             if ( $self->is_multiple($key) ) {
                 $str .= '[';
@@ -818,7 +837,7 @@ sub group_set {
 
                 my $matched = 0;
                 # variable names are case-insensitive
-                if (lc $name eq $got{name}) {
+                if (lc $name eq lc $got{name}) {
                     if (defined $args{filter} and length $args{filter}) {
                         # copy the filter arg here since this callback may
                         # be called multiple times and we don't want to
@@ -1763,6 +1782,13 @@ followed by a newline.
 Given a full key name, returns the canonical name of the key; this is
 the key with the section and name lower-cased; the subsection is left
 as-is.
+
+=head2 original_case( $name )
+
+Given a full key name, returns the casing of the name as it was last
+loaded from the file.  Note that for multiple-valued keys, this returns
+an array reference of casings, as each definition may have been provided
+in a different choice of case.
 
 =head1 DIFFERENCES FROM GIT-CONFIG
 

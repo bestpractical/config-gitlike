@@ -419,7 +419,7 @@ sub define {
         @_,
     );
     return unless defined $args{section} and defined $args{name};
-    my $original_case = join(".", @args{qw/section name/});
+    my $original_key = join(".", @args{qw/section name/});
     $args{name} = lc $args{name};
     my $key = join(".", @args{qw/section name/});
 
@@ -429,16 +429,16 @@ sub define {
         || $self->origins->{$key} eq $args{origin} ) {
         if ($self->is_multiple($key)) {
             push @{$self->data->{$key} ||= []}, $args{value};
-            push @{$self->casing->{$key} ||= []}, $original_case;
+            push @{$self->casing->{$key} ||= []}, $original_key;
         }
         elsif (exists $self->data->{$key}) {
             $self->set_multiple($key);
             $self->data->{$key} = [$self->data->{$key}, $args{value}];
-            $self->casing->{$key}  = [$self->casing->{$key}, $original_case];
+            $self->casing->{$key}  = [$self->casing->{$key}, $original_key];
         }
         else {
             $self->data->{$key} = $args{value};
-            $self->casing->{$key} = $original_case;
+            $self->casing->{$key} = $original_key;
         }
     }
     # we're overriding a key set previously from a different file
@@ -448,7 +448,7 @@ sub define {
 
         # set the new value
         $self->data->{$key} = $args{value};
-        $self->casing->{$key} = $original_case;
+        $self->casing->{$key} = $original_key;
     }
     $self->origins->{$key} = $args{origin};
 }
@@ -643,7 +643,7 @@ sub get_regexp {
     return wantarray ? %results : \%results;
 }
 
-sub original_case {
+sub original_key {
     my $self = shift;
     my ($key) = @_;
     return $self->casing->{ $self->canonical_case( $key ) };
@@ -1783,12 +1783,12 @@ Given a full key name, returns the canonical name of the key; this is
 the key with the section and name lower-cased; the subsection is left
 as-is.
 
-=head2 original_case( $name )
+=head2 original_key( $name )
 
-Given a full key name, returns the casing of the name as it was last
-loaded from the file.  Note that for multiple-valued keys, this returns
-an array reference of casings, as each definition may have been provided
-in a different choice of case.
+Given a full key name, returns the key as it was last loaded from the
+file, retaining what ever upper/lower case was used.  Note that for
+multiple-valued keys, this returns an array reference of key names, as
+each definition may have been provided in a different choice of case.
 
 =head1 DIFFERENCES FROM GIT-CONFIG
 

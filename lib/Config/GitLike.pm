@@ -757,10 +757,6 @@ sub group_set {
         my %args = %{$args_hash};
 
         my ($section, $subsection, $name) = _split_key($args{key});
-        my $key = $self->canonical_case( $args{key} );
-
-        $args{multiple} = $self->is_multiple($key)
-            unless defined $args{multiple};
 
         die "No section given in key or invalid key $args{key}\n"
             unless defined $section;
@@ -788,6 +784,11 @@ sub group_set {
 
         my $new;
         my @replace;
+
+        my $key = $self->canonical_case( $args{key} );
+
+        $args{multiple} = $self->is_multiple($key)
+            unless defined $args{multiple};
 
         # use this for comparison
         my $cmp_section =

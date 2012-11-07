@@ -66,14 +66,14 @@ has 'encoding' => (
 sub set_multiple {
     my $self = shift;
     my ($name, $mult) = (@_, 1);
-    $self->multiple->{$name} = $mult;
+    $self->multiple->{ $self->canonical_case( $name ) } = $mult;
 }
 
 sub is_multiple {
     my $self = shift;
     my $name = shift;
     return if !defined $name;
-    return $self->multiple->{$name};
+    return $self->multiple->{ $self->canonical_case( $name ) };
 }
 
 sub load {

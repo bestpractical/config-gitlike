@@ -1,5 +1,5 @@
 package Config::GitLike::Git;
-use Any::Moose;
+use Moo;
 use strict;
 use warnings;
 
@@ -48,7 +48,7 @@ sub load_dirs {
 }
 
 __PACKAGE__->meta->make_immutable;
-no Any::Moose;
+no Moo;
 
 1;
 

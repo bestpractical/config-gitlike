@@ -4,7 +4,8 @@ all_from('lib/Config/GitLike.pm');
 repository('http://github.com/bestpractical/config-gitlike');
 
 perl_version '5.008';
-requires 'Any::Moose';
+requires 'Moo';
+requires 'MooX::Types::MooseLike';
 build_requires 'Test::Exception';
 extra_tests();
 sign();

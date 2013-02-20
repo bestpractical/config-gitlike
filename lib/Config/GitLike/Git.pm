@@ -1,16 +1,16 @@
 package Config::GitLike::Git;
-use Any::Moose;
-use strict;
-use warnings;
+use Moo;
+use File::Spec;
+use namespace::clean;
 
 extends 'Config::GitLike';
 
 has '+confname' => (
-    default => 'gitconfig',
+    default => sub { 'gitconfig' },
 );
 
 has '+compatible' => (
-    default => 1,
+    default => sub { 1 },
 );
 
 sub is_git_dir {
@@ -46,9 +46,6 @@ sub load_dirs {
     my $dir = $self->is_git_dir($path) or return;
     $self->load_file( File::Spec->catfile( $dir, "config" ) );
 }
-
-__PACKAGE__->meta->make_immutable;
-no Any::Moose;
 
 1;
 

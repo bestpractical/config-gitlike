@@ -1,17 +1,13 @@
 package Config::GitLike::Cascaded;
-use Any::Moose;
-use Cwd;
-use File::Spec;
+use Moo;
+use namespace::clean;
 
 extends 'Config::GitLike';
 
 has 'cascade' => (
-    default => 1,
     is => 'rw',
+    default => sub { 1 },
 );
-
-__PACKAGE__->meta->make_immutable;
-no Any::Moose;
 
 1;
 

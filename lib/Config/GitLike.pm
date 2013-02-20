@@ -1,19 +1,20 @@
 package Config::GitLike;
-use Any::Moose;
+use 5.008;
+use Moo;
+use MooX::Types::MooseLike::Base qw(:all);
 
 use File::Spec;
 use Cwd;
 use Scalar::Util qw(openhandle);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
-use 5.008;
+use namespace::clean;
 
 our $VERSION = '1.10';
-
 
 has 'confname' => (
     is => 'rw',
     required => 1,
-    isa => 'Str',
+    isa => Str,
 );
 
 # not defaulting to {} allows the predicate is_loaded
@@ -21,32 +22,32 @@ has 'confname' => (
 has 'data' => (
     is => 'rw',
     predicate => 'is_loaded',
-    isa => 'HashRef',
+    isa => HashRef,
 );
 
 # key => bool
 has 'multiple' => (
     is => 'rw',
-    isa => 'HashRef',
+    isa => HashRef,
     default => sub { +{} },
 );
 
 has 'casing' => (
     is => 'rw',
-    isa => 'HashRef',
+    isa => HashRef,
     default => sub { +{} },
 );
 
 # filename where the definition of each key was loaded from
 has 'origins' => (
     is => 'rw',
-    isa => 'HashRef',
+    isa => HashRef,
     default => sub { +{} },
 );
 
 has 'config_files' => (
     is => 'rw',
-    isa => 'ArrayRef',
+    isa => ArrayRef,
     default => sub { [] },
 );
 
@@ -54,19 +55,19 @@ has 'config_files' => (
 # of only-write-things-that-git-config-can-read if you want to
 has 'compatible' => (
     is => 'rw',
-    isa => 'Bool',
-    default => 0,
+    isa => Bool,
+    default => sub { 0 },
 );
 
 has 'cascade' => (
     is => 'rw',
-    isa => 'Bool',
-    default => 0,
+    isa => Bool,
+    default => sub { 0 },
 );
 
 has 'encoding' => (
     is => 'rw',
-    isa => 'Maybe[Str]',
+    isa => Maybe[Str],
 );
 
 sub set_multiple {

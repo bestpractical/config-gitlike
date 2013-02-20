@@ -1,12 +1,13 @@
 package TestConfig;
-use Any::Moose;
+use Moo;
+use MooX::Types::MooseLike::Base qw(:all);
 use File::Spec;
 extends 'Config::GitLike';
 
 has 'tmpdir' => (
     is => 'rw',
     required => 1,
-    isa => 'Str',
+    isa => Str,
 );
 
 # override these methods so:
@@ -55,9 +56,6 @@ sub burp {
         || die "can't open $file_name: $!";
     print $fh $content;
 }
-
-__PACKAGE__->meta->make_immutable;
-no Any::Moose;
 
 1;
 

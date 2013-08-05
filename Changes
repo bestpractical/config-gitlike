@@ -1,5 +1,10 @@
 Revision history for perl module Config::GitLike
 
+1.12 2013-08-05
+
+    - Reformat Changes file to follow CPAN::Changes::Spec; no functional
+      changes.
+
 1.11 2013-08-04
 
     - Switch from the deprecated Any::Moose to Moo

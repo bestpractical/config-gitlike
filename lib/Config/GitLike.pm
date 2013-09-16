@@ -171,7 +171,7 @@ sub load_file {
     }
 
     # Do some canonicalization
-    $filename =~ s/~/$ENV{'HOME'}/g;
+    $filename =~ s/^~/$ENV{'HOME'}/g;
     $filename = File::Spec->rel2abs($filename);
 
     return $self->data if grep {$_ eq $filename} @{$self->config_files};

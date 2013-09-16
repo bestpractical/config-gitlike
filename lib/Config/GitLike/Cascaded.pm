@@ -26,10 +26,11 @@ Config::GitLike::Cascaded - git-like config file parsing with cascaded inheritan
 This module exists purely for backwards compatibility; its use is
 deprecated, and will be removed in a future release.
 
-=head1 DESCRIPTION
+=head1 METHODS
 
-This module simply defaults L<Config::GitLike/cascaded> to a true
-value.
+=head2 cascade
+
+This module simply defaults L<Config::GitLike/cascade> to a true value.
 
 =head1 SEE ALSO
 

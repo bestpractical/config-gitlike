@@ -1805,7 +1805,7 @@ Parameters:
     name => 'str'
     value => 'str'
 
-Given a section, a key name, and a value¸ store this information
+Given a section, a key name, and a value, store this information
 in memory in the config object.
 
 Returns the value that was just defined on success, or undef

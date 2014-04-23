@@ -1,5 +1,10 @@
 Revision history for perl module Config::GitLike
 
+1.13 2014-04-22
+
+    - Only expand ~ in paths if they are the first character
+    - Implement include.path, as git 1.7.10 and above do
+
 1.12 2013-08-05
 
     - Reformat Changes file to follow CPAN::Changes::Spec; no functional

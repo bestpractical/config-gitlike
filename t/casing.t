@@ -3,11 +3,12 @@ use warnings;
 
 use Test::More;
 use File::Spec;
+use Cwd;
 use File::Temp qw/tempdir/;
 use lib 't/lib';
 use TestConfig;
 
-my $config_dirname = tempdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} );
+my $config_dirname = Cwd::abs_path( tempdir( CLEANUP => !$ENV{CONFIG_GITLIKE_DEBUG} ) );
 my $config_filename = File::Spec->catfile( $config_dirname, 'config' );
 
 diag "config file is: $config_filename" if $ENV{TEST_VERBOSE};

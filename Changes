@@ -1,5 +1,9 @@
 Revision history for perl module Config::GitLike
 
+1.14 2014-05-20
+
+    - Fix tests under MacOS, where TMPDIR is, by default, under a symlink
+
 1.13 2014-04-22
 
     - Only expand ~ in paths if they are the first character

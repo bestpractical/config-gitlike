@@ -1,5 +1,10 @@
 Revision history for perl module Config::GitLike
 
+1.16 2015-02-16
+ - Canonicalize paths using File::Spec->canonpath; this addresses
+   failures on Windows where /-separated paths were stored in the
+   origins hash, due to Cwd::abs_path returning them
+
 1.15 2014-06-24
  - Cope with Cwd::abs_path dying on non-existant paths on Windows
 

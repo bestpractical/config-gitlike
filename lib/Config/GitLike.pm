@@ -198,6 +198,7 @@ sub load_file {
     $filename =~ s/^~/$ENV{'HOME'}/g;
     $filename = eval { Cwd::abs_path( File::Spec->rel2abs($filename, $args{relative}) ) }
         || $filename;
+    $filename = File::Spec->canonpath( $filename );
 
     return $self->data if grep {$_ eq $filename} @{$self->config_files}
         and not $args{force};

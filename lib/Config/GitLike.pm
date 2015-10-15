@@ -675,14 +675,26 @@ sub get_regexp {
         }
         elsif ($args{filter} =~ s/^!//) {
             for (keys %results) {
-                delete $results{$_} if defined $results{$_}
-                    and $results{$_} =~ m/$args{filter}/i;
+                my @values = ref $results{$_} ? @{$results{$_}} : $results{$_};
+                @values = grep { not defined or not m/$args{filter}/i } @values;
+                if (!@values) {
+                    delete $results{$_};
+                }
+                else {
+                    $results{$_} = @values > 1 ? \@values : $values[0];
+                }
             }
         }
         else {
             for (keys %results) {
-                delete $results{$_} if not defined $results{$_}
-                    or $results{$_} !~ m/$args{filter}/i;
+                my @values = ref $results{$_} ? @{$results{$_}} : $results{$_};
+                @values = grep { defined and m/$args{filter}/i } @values;
+                if (!@values) {
+                    delete $results{$_};
+                }
+                else {
+                    $results{$_} = @values > 1 ? \@values : $values[0];
+                }
             }
         }
     }

@@ -144,7 +144,7 @@ sub load_global {
 sub user_file {
     my $self = shift;
     return
-        File::Spec->catfile( "~", "." . $self->confname );
+        File::Spec->catfile( $ENV{'HOME'}, "." . $self->confname );
 }
 
 sub load_user {

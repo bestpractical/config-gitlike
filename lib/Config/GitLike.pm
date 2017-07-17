@@ -737,6 +737,8 @@ sub canonical_case {
     my $self = shift;
     my ($key) = @_;
     my ($section, $subsection, $name) = _split_key($key);
+    die "No section given in key: $key\n" unless $section;
+
     return join( '.',
         grep { defined } (lc $section, $subsection, lc $name),
     );

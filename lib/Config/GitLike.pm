@@ -70,6 +70,12 @@ has 'encoding' => (
     isa => Maybe[Str],
 );
 
+has 'newlines' => (
+    is => 'rw',
+    isa => HashRef,
+    default => sub { +{} },
+);
+
 has 'include' => (
     is => 'rw',
     isa => Str,
@@ -164,6 +170,19 @@ sub _read_config {
     }
 
     my $c = do {local $/; <$fh>};
+
+    my $newlines = "\n";
+    if ($c =~ m/\r\n/) {
+        # Convert from DOS; `git` applies this on read always, and
+        # simply mangles files on write.
+        $newlines = "\r\n";
+        $c =~ s/\r\n/\n/g;
+    } elsif ($c !~ /\n/ and $c =~ /\r/) {
+        # Best-guess convert from Mac.
+        $newlines = "\r";
+        $c =~ s/\r/\n/g;
+    }
+    $self->newlines->{$filename} = $newlines;
 
     $c =~ s/\n*$/\n/; # Ensure it ends with a newline
 
@@ -1077,6 +1096,8 @@ sub _write_config {
     my $self = shift;
     my($filename, $content) = @_;
 
+    my $newlines = $self->newlines->{$filename} || "\n";
+    $content =~ s/\n/$newlines/g if $newlines ne "\n";
     # allow nested symlinks but only within reason
     my $max_depth = 5;
 
@@ -1901,6 +1922,11 @@ Git just rejects them.
 
 We don't support NUL-terminating output (the --null flag to
 git-config). Who needs it?
+
+Git only supports reading UNIX- and DOS-style newlines ("\n" and
+"\r\n"), and always uses "\n" when modifying files.  We also support
+reading Mac-style newlines ("\r"), and write updates to files using
+the same newlines as they were read with.
 
 =head1 BUGS
 

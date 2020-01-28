@@ -47,6 +47,11 @@ sub load_dirs {
     $self->load_file( File::Spec->catfile( $dir, "config" ) );
 }
 
+sub dir_file {
+    my $self = shift;
+    return ".git/config";
+}
+
 __PACKAGE__->meta->make_immutable;
 no Moo;
 

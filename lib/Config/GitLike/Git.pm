@@ -49,7 +49,13 @@ sub load_dirs {
 
 sub dir_file {
     my $self = shift;
-    return ".git/config";
+    my $path = $self->is_git_dir(".");
+    if ((defined $path) and ($path ne "")) {
+	my($vol, $dirs, undef) = File::Spec->splitpath( $path, 1 );
+	my @dirs               = File::Spec->splitdir( $dirs );
+	$path = File::Spec->catfile( @dirs, "config");
+    }
+    return $path;
 }
 
 __PACKAGE__->meta->make_immutable;
